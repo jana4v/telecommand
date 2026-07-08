@@ -1,0 +1,45 @@
+routes:
+  - id: spa
+    uri: /*
+    upstream:
+      type: roundrobin
+      nodes:
+        "spa:80": 1
+
+  - id: gateway-api
+    uri: /api/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "gateway:21000": 1
+
+  - id: gateway-restapi
+    uri: /restApi/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "gateway:21000": 1
+
+  - id: simulator
+    uri: /simulator/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "simulator:21001": 1
+
+  - id: umacs
+    uri: /umacs/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "umacs-tc:21002": 1
+
+  - id: nats-ws
+    uri: /nats*
+    enable_websocket: true
+    upstream:
+      type: roundrobin
+      nodes:
+        "nats:4223": 1
+
+#END

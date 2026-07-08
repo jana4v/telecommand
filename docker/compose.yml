@@ -196,8 +196,26 @@ services:
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
+  # Ingress — APISIX is the single public entrypoint: static SPA + API routing
+  # ---------------------------------------------------------------------------
+
+  apisix:
+    image: apache/apisix:3.9.1-debian
+    volumes:
+      - ./apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+      - ./apisix/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+    ports:
+      - "${GUI_PORT:-80}:9080"
+    depends_on:
+      - spa
+      - gateway
+      - simulator
+      - umacs-tc
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
   # Frontend — static-only nginx serving the built Nuxt SPA (no proxying;
-  # APISIX is the reverse proxy / ingress — see the apisix service)
+  # APISIX is the reverse proxy / ingress — see the apisix service above)
   # ---------------------------------------------------------------------------
 
   spa:

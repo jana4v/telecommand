@@ -1,0 +1,11 @@
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml
+
+apisix:
+  node_listen: 9080
+
+nginx_config:
+  http:
+    client_max_body_size: 200m
