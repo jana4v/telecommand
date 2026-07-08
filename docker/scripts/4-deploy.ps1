@@ -15,7 +15,7 @@
 #    .\4-deploy.ps1 -Restart     # stop then start
 #    .\4-deploy.ps1 -Status      # show running containers
 #    .\4-deploy.ps1 -Logs        # stream logs (Ctrl+C to stop)
-#    .\4-deploy.ps1 -Logs gateway iam   # stream logs for specific services
+#    .\4-deploy.ps1 -Logs gateway keycloak   # stream logs for specific services
 #    .\4-deploy.ps1 -Pull        # re-pull base images (online only)
 # =============================================================
 param(

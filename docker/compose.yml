@@ -200,6 +200,7 @@ services:
       - gateway
       - simulator
       - umacs-tc
+      - keycloak
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------

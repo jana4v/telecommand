@@ -4,7 +4,7 @@
 #  Run this on the internet-connected build machine AFTER 1-build.ps1.
 #  Outputs to docker/images/ (3 tar files):
 #    mainframe-apps.tar  - all Go microservice images
-#    mainframe-gui.tar   - nginx + Nuxt GUI image
+#    mainframe-gui.tar   - static Nuxt SPA image (nginx, no proxying)
 #    infra.tar           - postgres, redis, nats, influxdb, alpine base
 #
 #  Transfer the entire docker/ folder to the offline PC, then run 3-load.ps1.
@@ -24,7 +24,6 @@ $OutDir    = Join-Path $DockerDir "images"
 
 $AppImages = @(
     "mainframe/gateway:latest",
-    "mainframe/iam:latest",
     "mainframe/ingest:latest",
     "mainframe/chainmon:latest",
     "mainframe/comparator:latest",
@@ -46,7 +45,9 @@ $InfraImages = @(
     "alpine:3.20",
     "nginx:1.27-alpine",
     "golang:1.25-alpine",
-    "node:22-alpine"
+    "node:22-alpine",
+    "quay.io/keycloak/keycloak:26.0",
+    "apache/apisix:3.9.1-debian"
 )
 
 function Write-Header {
