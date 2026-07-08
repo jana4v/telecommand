@@ -196,17 +196,12 @@ services:
     restart: unless-stopped
 
   # ---------------------------------------------------------------------------
-  # Frontend — nginx serves the Nuxt SPA + reverse-proxies to backend services
+  # Frontend — static-only nginx serving the built Nuxt SPA (no proxying;
+  # APISIX is the reverse proxy / ingress — see the apisix service)
   # ---------------------------------------------------------------------------
 
-  gui:
+  spa:
     image: mainframe/gui:latest
-    ports:
-      - "${GUI_PORT:-80}:80"
-    depends_on:
-      - gateway
-      - iam
-      - simulator
     restart: unless-stopped
 
 # ---------------------------------------------------------------------------
