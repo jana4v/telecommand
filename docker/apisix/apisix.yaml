@@ -8,6 +8,13 @@ routes:
 
   - id: gateway-api
     uri: /api/*
+    plugins:
+      openid-connect:
+        client_id: apisix-introspection
+        client_secret: apisix-introspection-secret-change-me
+        discovery: http://keycloak:8080/realms/mainframe/.well-known/openid-configuration
+        bearer_only: true
+        realm: mainframe
     upstream:
       type: roundrobin
       nodes:
@@ -15,6 +22,13 @@ routes:
 
   - id: gateway-restapi
     uri: /restApi/*
+    plugins:
+      openid-connect:
+        client_id: apisix-introspection
+        client_secret: apisix-introspection-secret-change-me
+        discovery: http://keycloak:8080/realms/mainframe/.well-known/openid-configuration
+        bearer_only: true
+        realm: mainframe
     upstream:
       type: roundrobin
       nodes:
@@ -22,6 +36,13 @@ routes:
 
   - id: simulator
     uri: /simulator/*
+    plugins:
+      openid-connect:
+        client_id: apisix-introspection
+        client_secret: apisix-introspection-secret-change-me
+        discovery: http://keycloak:8080/realms/mainframe/.well-known/openid-configuration
+        bearer_only: true
+        realm: mainframe
     upstream:
       type: roundrobin
       nodes:
@@ -29,6 +50,13 @@ routes:
 
   - id: umacs
     uri: /umacs/*
+    plugins:
+      openid-connect:
+        client_id: apisix-introspection
+        client_secret: apisix-introspection-secret-change-me
+        discovery: http://keycloak:8080/realms/mainframe/.well-known/openid-configuration
+        bearer_only: true
+        realm: mainframe
     upstream:
       type: roundrobin
       nodes:
