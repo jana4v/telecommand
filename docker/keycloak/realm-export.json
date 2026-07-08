@@ -36,6 +36,10 @@
     {
       "username": "operator",
       "enabled": true,
+      "email": "operator@example.com",
+      "emailVerified": true,
+      "firstName": "Operator",
+      "lastName": "User",
       "credentials": [
         { "type": "password", "value": "Operator@123!", "temporary": false }
       ],
