@@ -1,0 +1,21 @@
+service:
+  name: tm-storage
+  log_level: info
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+
+postgres:
+  dsn: "postgres://scg:Checkout123@postgres:5432/scg?sslmode=disable"
+
+# InfluxDB 3 OSS — only used when the 'storage' profile is active.
+# Set INFLUX_TOKEN in .env if InfluxDB auth is enabled.
+influx:
+  url: "http://influxdb:8086"
+  token: ""
+  org: mainframe
+  database: telemetry
+
+poll_interval_ms: 500

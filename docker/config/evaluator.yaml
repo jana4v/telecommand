@@ -1,0 +1,28 @@
+service:
+  name: "tm-evaluator"
+  log_level: "info"
+
+http:
+  port: 21006
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+
+# Optional: connect to SQLite so chain-map keys (TM1, SMON1, …) are also
+# accessible by mnemonic name in addition to param_id.
+# Leave path empty to disable mnemonic enrichment.
+database:
+  type: "sqlite"
+  path: ""          # e.g. "/data/saturn.db" when shared volume is mounted
+
+eval:
+  # Maximum simultaneous script executions. Each uses one goroutine.
+  max_concurrent: 10
+  # Hard ceiling: any script running longer than this is interrupted.
+  max_timeout_ms: 30000
+  # Default timeout applied when the caller does not pass timeout_ms.
+  default_timeout_ms: 5000
+  # Async job results are kept in memory for this many minutes then reaped.
+  job_ttl_minutes: 60

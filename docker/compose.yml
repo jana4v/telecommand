@@ -1,0 +1,213 @@
+# Mainframe full-stack deployment
+# Usage (from the docker/ directory):
+#   docker compose up -d                  # start core stack
+#   docker compose --profile storage up -d  # include InfluxDB + storage service
+#   docker compose down                   # stop everything
+#
+# Config files in ./config/ are bind-mounted into each Go service.
+# Edit them to change runtime settings without rebuilding images.
+
+name: mainframe
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Infrastructure
+  # ---------------------------------------------------------------------------
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-scg}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Checkout123}
+      POSTGRES_DB:       ${POSTGRES_DB:-scg}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scg} -d ${POSTGRES_DB:-scg}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["-c", "/etc/nats/nats.conf"]
+    volumes:
+      - ./nats/nats.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2.7
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE:     setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_ADMIN_USER:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_ADMIN_PASSWORD:-Admin@123!}
+      DOCKER_INFLUXDB_INIT_ORG:      ${INFLUX_ORG:-mainframe}
+      DOCKER_INFLUXDB_INIT_BUCKET:   ${INFLUX_BUCKET:-telemetry}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:-mainframe-influx-token-change-me}
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    profiles: [storage]
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Go microservices
+  # ---------------------------------------------------------------------------
+
+  iam:
+    image: mainframe/iam:latest
+    volumes:
+      - ./config/iam.yaml:/config.yaml:ro
+    # gateway uses positional arg (os.Args[1]) not --config flag
+    command: ["/config.yaml"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  gateway:
+    image: mainframe/gateway:latest
+    volumes:
+      - ./config/gateway.yaml:/config.yaml:ro
+    # gateway uses positional arg (os.Args[1]) not --config flag
+    command: ["/config.yaml"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+      iam:      { condition: service_started }
+    restart: unless-stopped
+
+  ingest:
+    image: mainframe/ingest:latest
+    volumes:
+      - ./config/ingest.yaml:/config.yaml:ro
+    command: ["--config", "/config.yaml"]
+    depends_on:
+      redis: { condition: service_healthy }
+      nats:  { condition: service_healthy }
+    restart: unless-stopped
+
+  chainmon:
+    image: mainframe/chainmon:latest
+    volumes:
+      - ./config/chainmon.yaml:/config.yaml:ro
+    command: ["--config", "/config.yaml"]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  evaluator:
+    image: mainframe/evaluator:latest
+    volumes:
+      - ./config/evaluator.yaml:/config.yaml:ro
+    command: ["/config.yaml"]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  comparator:
+    image: mainframe/comparator:latest
+    volumes:
+      - ./config/comparator.yaml:/config.yaml:ro
+    command: ["--config", "/config.yaml"]
+    depends_on:
+      redis:    { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  limiter:
+    image: mainframe/limiter:latest
+    volumes:
+      - ./config/limiter.yaml:/config.yaml:ro
+    command: ["--config", "/config.yaml"]
+    depends_on:
+      redis:    { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  simulator:
+    image: mainframe/simulator:latest
+    volumes:
+      - ./config/simulator.yaml:/config.yaml:ro
+    command: ["--config", "/config.yaml"]
+    depends_on:
+      redis:    { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  storage:
+    image: mainframe/storage:latest
+    volumes:
+      - ./config/storage.yaml:/config.yaml:ro
+    command: ["--config", "/config.yaml"]
+    depends_on:
+      redis:     { condition: service_healthy }
+      postgres:  { condition: service_healthy }
+      influxdb:  { condition: service_healthy }
+    profiles: [storage]
+    restart: unless-stopped
+
+  umacs-tc:
+    image: mainframe/umacs-tc:latest
+    volumes:
+      - ./config/umacs-tc.yaml:/config.yaml:ro
+    command: ["--config", "/config.yaml"]
+    depends_on:
+      redis:    { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Frontend — nginx serves the Nuxt SPA + reverse-proxies to backend services
+  # ---------------------------------------------------------------------------
+
+  gui:
+    image: mainframe/gui:latest
+    ports:
+      - "${GUI_PORT:-80}:80"
+    depends_on:
+      - gateway
+      - iam
+      - simulator
+    restart: unless-stopped
+
+# ---------------------------------------------------------------------------
+# Persistent volumes
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
+  redis_data:
+  influxdb_data:
+
+# ---------------------------------------------------------------------------
+# Single bridge network — all services resolve each other by service name
+# ---------------------------------------------------------------------------
+networks:
+  default:
+    name: mainframe-net

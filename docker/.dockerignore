@@ -1,0 +1,38 @@
+# Applied when build context is the repo root (tm_tc/)
+
+# Version control
+.git
+.gitignore
+
+# Node artefacts (GUI builder stage installs its own)
+GUI/node_modules
+GUI/.nuxt
+GUI/.output
+
+# Pre-built Go binaries and databases (images build from source)
+GoLang/bin/
+GoLang/**/*.exe
+GoLang/**/*.db
+GoLang/**/*.db-shm
+GoLang/**/*.db-wal
+GoLang/**/*.log
+
+# IDE / Claude Code internals
+.vscode
+.claude
+GoLang/.claude
+
+# Nuxt output (generated inside Docker, not needed from host)
+ui/dist
+
+# Old Python artefacts (project is Go-only now)
+src/
+__pycache__/
+*.pyc
+*.pyo
+
+# Docs / scratch files
+Documents/
+SQLQueryies/
+promts.txt
+scratch_*.ps1

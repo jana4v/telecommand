@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1
+# Build context: repo root (tm_tc/)
+#
+# Two-stage build:
+#   1. Node builder — runs "npm run generate" to produce static assets
+#   2. nginx runtime — serves those assets + proxies to Go backend services
+
+###############################################################################
+# Stage 1 — Build Nuxt static files
+###############################################################################
+FROM node:22-alpine AS gui-builder
+
+WORKDIR /app/GUI
+
+# Copy all source first — postinstall runs "node ./run-nuxt.mjs prepare"
+# which needs the full project tree, so we can't split deps vs source here.
+COPY GUI/ ./
+RUN npm install --legacy-peer-deps
+
+# nuxt.config.ts sets nitro.output.publicDir to '../ui/dist/tm_tc'
+# (relative to GUI/), so generated files land at /app/ui/dist/tm_tc/
+RUN npm run generate
+
+###############################################################################
+# Stage 2 — nginx runtime with static files + reverse proxy config
+###############################################################################
+FROM nginx:1.27-alpine AS gui
+
+# Copy Nuxt-generated static assets
+COPY --from=gui-builder /app/ui/dist/tm_tc/ /usr/share/nginx/html/
+
+# Replace the default nginx vhost with our proxy + SPA config
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80

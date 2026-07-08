@@ -18,3 +18,7 @@ __pycache__/
 .output/
 *.tmp
 *.swp
+GUI/node_modules/
+GUI/.output/
+
+docker/images/*.tar

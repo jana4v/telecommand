@@ -1,0 +1,14 @@
+service:
+  name: "tm-simulator"
+  log_level: "info"
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+
+postgres:
+  dsn: "postgres://scg:Checkout123@postgres:5432/scg?sslmode=disable"
+
+http:
+  port: 21001
