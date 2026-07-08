@@ -44,15 +44,14 @@ export default defineNuxtConfig({
       // Override via .env (NUXT_PUBLIC_API_BASE, etc.) for non-standard setups.
       apiBase:          isDev ? `${devHost}/api/go/v1`          : '/api/go/v1',
       tmApiBase:        isDev ? `${devHost}/api/v2/tm`          : '/api/v2/tm',
-      // IAM is now served by the Python FastAPI backend (no Go gateway in
-      // the path). Both dev and prod point at the same ``/iam`` prefix; in
-      // dev the Vite proxy below forwards ``/iam`` to the FastAPI server on
-      // :8010, in prod nginx (or whatever reverse proxy) is expected to do
-      // the same. Override via NUXT_PUBLIC_IAM_BASE in .env if you front
-      // FastAPI on a different origin (e.g. https://host/iam-api).
-      iamBase:          isDev ? `${devHost}/iam`                 : '/iam',
       restApiBase:      isDev ? `${devHost}/restApi`            : '/restApi',
       simulatorApiBase: isDev ? `${devHost}/simulator/api/go/v1`: '/simulator/api/go/v1',
+      // Keycloak is a separate origin reached directly by the browser (not
+      // proxied) — the OIDC redirect flow works cross-origin by design.
+      // Override via NUXT_PUBLIC_KEYCLOAK_URL/_REALM/_CLIENT_ID in .env.
+      keycloakUrl:      'http://localhost:8080',
+      keycloakRealm:    'mainframe',
+      keycloakClientId: 'tm-tc-spa',
     },
   },
 
@@ -73,10 +72,6 @@ export default defineNuxtConfig({
       proxy: {
         '/api/go/v1': { target: 'http://localhost:21000', changeOrigin: false },
         '/api/v2/tm': { target: 'http://127.0.0.1:8010', changeOrigin: false },
-        // IAM is now served by the Python FastAPI backend. Keep the path
-        // prefix as-is so the FastAPI router (which already mounts at
-        // ``/iam``) gets the request untouched.
-        '/iam':       { target: 'http://127.0.0.1:8010', changeOrigin: true },
         '/nats': { target: 'ws://localhost:4223', ws: true, changeOrigin: false },
       },
     },
