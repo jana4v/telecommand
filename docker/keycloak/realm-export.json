@@ -26,9 +26,11 @@
       "name": "APISIX Token Introspection",
       "protocol": "openid-connect",
       "publicClient": false,
-      "bearerOnly": true,
+      "bearerOnly": false,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "clientAuthenticatorType": "client-secret",
       "secret": "apisix-introspection-secret-change-me"
     }
   ],
