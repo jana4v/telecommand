@@ -20,5 +20,6 @@ __pycache__/
 *.swp
 GUI/node_modules/
 GUI/.output/
+GUI/.data/
 
 docker/images/*.tar
