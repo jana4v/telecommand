@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useAuth } from '@/composables/useAuth'
+
 const visible = useState<boolean>('visible', () => true)
+const auth = useAuth()
 </script>
 
 <template>
@@ -18,6 +21,19 @@ const visible = useState<boolean>('visible', () => true)
           <img src="/tc.gif" alt="logo" class="topnav-logo">
           <span class="topnav-brand">TeleCommand</span>
         </div>
+      </div>
+
+      <div class="topnav-right">
+        <span v-if="auth.user.value" class="topnav-username">
+          {{ auth.user.value.profile.preferred_username }}
+        </span>
+        <button
+          class="menu-toggle-btn"
+          title="Log Out"
+          @click="auth.logout()"
+        >
+          <i class="pi pi-sign-out" />
+        </button>
       </div>
     </div>
   </nav>
@@ -47,6 +63,17 @@ const visible = useState<boolean>('visible', () => true)
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.topnav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topnav-username {
+  color: #e2e8f0;
+  font-size: 0.9rem;
 }
 
 .menu-toggle-btn {
