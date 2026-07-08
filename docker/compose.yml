@@ -93,16 +93,6 @@ services:
   # Go microservices
   # ---------------------------------------------------------------------------
 
-  iam:
-    image: mainframe/iam:latest
-    volumes:
-      - ./config/iam.yaml:/config.yaml:ro
-    # gateway uses positional arg (os.Args[1]) not --config flag
-    command: ["/config.yaml"]
-    depends_on:
-      postgres: { condition: service_healthy }
-    restart: unless-stopped
-
   gateway:
     image: mainframe/gateway:latest
     volumes:
@@ -112,7 +102,6 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis:    { condition: service_healthy }
-      iam:      { condition: service_started }
     restart: unless-stopped
 
   ingest:

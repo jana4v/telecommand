@@ -26,7 +26,7 @@ $GuiFile    = Join-Path $DockerDir "Dockerfile.gui"
 
 # Go service targets
 $GoServices = @(
-    "gateway", "iam", "ingest", "chainmon", "comparator",
+    "gateway", "ingest", "chainmon", "comparator",
     "limiter", "simulator", "storage", "umacs-tc"
 )
 
