@@ -19,7 +19,7 @@ $ImagesDir = Join-Path $DockerDir "images"
 function Write-Header {
     Write-Host ""
     Write-Host "================================================================" -ForegroundColor Cyan
-    Write-Host "  Mainframe - Load Images on Offline PC" -ForegroundColor Cyan
+    Write-Host "  SCG - Load Images on Offline PC" -ForegroundColor Cyan
     Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host "  Images dir: $ImagesDir" -ForegroundColor DarkGray
     Write-Host ""

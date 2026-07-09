@@ -3,8 +3,8 @@
 #
 #  Run this on the internet-connected build machine AFTER 1-build.ps1.
 #  Outputs to docker/images/ (3 tar files):
-#    mainframe-apps.tar  - all Go microservice images
-#    mainframe-gui.tar   - static Nuxt SPA image (nginx, no proxying)
+#    scg-apps.tar        - all Go microservice images
+#    scg-gui.tar          - static Nuxt SPA image (nginx, no proxying)
 #    infra.tar           - postgres, redis, nats, influxdb, alpine base
 #
 #  Transfer the entire docker/ folder to the offline PC, then run 3-load.ps1.
@@ -23,18 +23,18 @@ $DockerDir = $PSScriptRoot | Split-Path -Parent
 $OutDir    = Join-Path $DockerDir "images"
 
 $AppImages = @(
-    "mainframe/gateway:latest",
-    "mainframe/ingest:latest",
-    "mainframe/chainmon:latest",
-    "mainframe/comparator:latest",
-    "mainframe/limiter:latest",
-    "mainframe/simulator:latest",
-    "mainframe/storage:latest",
-    "mainframe/umacs-tc:latest"
+    "scg/gateway:latest",
+    "scg/ingest:latest",
+    "scg/chainmon:latest",
+    "scg/comparator:latest",
+    "scg/limiter:latest",
+    "scg/simulator:latest",
+    "scg/storage:latest",
+    "scg/umacs-tc:latest"
 )
 
 $GuiImages = @(
-    "mainframe/gui:latest"
+    "scg/gui:latest"
 )
 
 $InfraImages = @(
@@ -53,7 +53,7 @@ $InfraImages = @(
 function Write-Header {
     Write-Host ""
     Write-Host "================================================================" -ForegroundColor Cyan
-    Write-Host "  Mainframe - Save Images for Offline Transfer" -ForegroundColor Cyan
+    Write-Host "  SCG - Save Images for Offline Transfer" -ForegroundColor Cyan
     Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host "  Output: $OutDir" -ForegroundColor DarkGray
     Write-Host ""
@@ -75,15 +75,15 @@ if (-not $SkipPull) {
     Write-Host ""
 }
 
-Write-Host "  Saving app images -> mainframe-apps.tar ..." -ForegroundColor Yellow
-docker save $AppImages -o (Join-Path $OutDir "mainframe-apps.tar")
+Write-Host "  Saving app images -> scg-apps.tar ..." -ForegroundColor Yellow
+docker save $AppImages -o (Join-Path $OutDir "scg-apps.tar")
 if ($LASTEXITCODE -ne 0) { throw "Failed to save app images" }
-Write-Host "  [OK] mainframe-apps.tar" -ForegroundColor Green
+Write-Host "  [OK] scg-apps.tar" -ForegroundColor Green
 
-Write-Host "  Saving GUI image -> mainframe-gui.tar ..." -ForegroundColor Yellow
-docker save $GuiImages -o (Join-Path $OutDir "mainframe-gui.tar")
+Write-Host "  Saving GUI image -> scg-gui.tar ..." -ForegroundColor Yellow
+docker save $GuiImages -o (Join-Path $OutDir "scg-gui.tar")
 if ($LASTEXITCODE -ne 0) { throw "Failed to save GUI image" }
-Write-Host "  [OK] mainframe-gui.tar" -ForegroundColor Green
+Write-Host "  [OK] scg-gui.tar" -ForegroundColor Green
 
 Write-Host "  Saving infra images -> infra.tar ..." -ForegroundColor Yellow
 docker save $InfraImages -o (Join-Path $OutDir "infra.tar")

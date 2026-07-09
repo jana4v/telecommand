@@ -1,5 +1,5 @@
 # =============================================================
-#  4-deploy.ps1 - Start, stop, or inspect the Mainframe stack
+#  4-deploy.ps1 - Start, stop, or inspect the SCG stack
 #
 #  Run from any directory (uses script location to find compose.yml).
 #
@@ -37,7 +37,7 @@ $EnvFile     = Join-Path $DockerDir ".env"
 function Write-Header {
     Write-Host ""
     Write-Host "================================================================" -ForegroundColor Cyan
-    Write-Host "  Mainframe - Deployment Manager" -ForegroundColor Cyan
+    Write-Host "  SCG - Deployment Manager" -ForegroundColor Cyan
     Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -84,7 +84,7 @@ if ($Logs) {
 }
 
 if ($Down) {
-    Write-Host "  Stopping Mainframe stack..." -ForegroundColor Yellow
+    Write-Host "  Stopping SCG stack..." -ForegroundColor Yellow
     docker compose (Get-ComposeArgs) down
     Write-Host ""
     Write-Host "  Stack stopped. Data volumes are preserved." -ForegroundColor Green
@@ -93,12 +93,12 @@ if ($Down) {
 }
 
 if ($Restart) {
-    Write-Host "  Restarting Mainframe stack..." -ForegroundColor Yellow
+    Write-Host "  Restarting SCG stack..." -ForegroundColor Yellow
     docker compose (Get-ComposeArgs) down
     Start-Sleep -Seconds 2
 }
 
-Write-Host "  Starting Mainframe stack..." -ForegroundColor Yellow
+Write-Host "  Starting SCG stack..." -ForegroundColor Yellow
 if ($Storage) {
     Write-Host "  Profile: storage (InfluxDB + storage service included)" -ForegroundColor DarkGray
 }

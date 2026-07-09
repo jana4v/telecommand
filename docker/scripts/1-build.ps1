@@ -1,5 +1,5 @@
 # =============================================================
-#  1-build.ps1 - Build all Mainframe Docker images from source
+#  1-build.ps1 - Build all SCG Docker images from source
 #
 #  Run from any directory (uses script location to find paths).
 #  Requirements: Docker Desktop (or Docker Engine), internet access
@@ -33,7 +33,7 @@ $GoServices = @(
 function Write-Header {
     Write-Host ""
     Write-Host "================================================================" -ForegroundColor Cyan
-    Write-Host "  Mainframe - Docker Image Builder" -ForegroundColor Cyan
+    Write-Host "  SCG - Docker Image Builder" -ForegroundColor Cyan
     Write-Host "================================================================" -ForegroundColor Cyan
     Write-Host "  Repo root : $RepoRoot" -ForegroundColor DarkGray
     Write-Host "  No-cache  : $NoCache" -ForegroundColor DarkGray
@@ -84,7 +84,7 @@ if ($buildGo -and $GoServices.Count -gt 0) {
     Write-Host "  (First build downloads Go modules - takes a few minutes)" -ForegroundColor DarkGray
     Write-Host ""
     foreach ($svc in $GoServices) {
-        Build-Image -Tag "mainframe/${svc}:latest" -Dockerfile $GoFile -Target $svc
+        Build-Image -Tag "scg/${svc}:latest" -Dockerfile $GoFile -Target $svc
     }
 }
 
@@ -94,7 +94,7 @@ if ($buildGui) {
     Write-Host "  Building GUI..." -ForegroundColor Cyan
     Write-Host "  (First build downloads npm packages - takes a few minutes)" -ForegroundColor DarkGray
     Write-Host ""
-    Build-Image -Tag "mainframe/gui:latest" -Dockerfile $GuiFile
+    Build-Image -Tag "scg/gui:latest" -Dockerfile $GuiFile
 }
 
 Write-Host ""
