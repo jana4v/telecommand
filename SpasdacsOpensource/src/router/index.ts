@@ -62,9 +62,9 @@ router.onError((error, to) => {
   window.location.reload();
 });
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuth();
-  auth.restoreSession();
+  await auth.restoreSession();
 
   if (to.meta.public) {
     if (to.path === "/login" && auth.isLoggedIn) {

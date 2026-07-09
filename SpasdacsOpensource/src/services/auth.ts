@@ -1,4 +1,5 @@
 import { reactive } from "vue";
+import { UserManager, WebStorageStateStore, type User } from "oidc-client-ts";
 
 export type RoleName = "super_admin" | "admin" | "operator" | "viewer" | string;
 
@@ -10,207 +11,109 @@ export interface AuthUser {
   roles?: RoleName[];
 }
 
-interface StoredSession {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-  user: AuthUser | null;
+const KEYCLOAK_URL = (import.meta.env.VITE_KEYCLOAK_URL as string | undefined) ?? "http://localhost:8080";
+const KEYCLOAK_REALM = (import.meta.env.VITE_KEYCLOAK_REALM as string | undefined) ?? "scg";
+const KEYCLOAK_CLIENT_ID = (import.meta.env.VITE_KEYCLOAK_CLIENT_ID as string | undefined) ?? "spasdacs-spa";
+
+function redirectUri(): string {
+  return `${window.location.origin}/spasdacs/`;
 }
 
-interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  user?: AuthUser;
-}
-
-interface RefreshResponse {
-  access_token: string;
-  expires_in: number;
-}
-
-const STORAGE_KEY = "spasdacs-auth-v1";
-
-const state = reactive<{
-  session: StoredSession | null;
-}>({
-  session: readStorage(),
+export const userManager = new UserManager({
+  authority: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`,
+  client_id: KEYCLOAK_CLIENT_ID,
+  redirect_uri: redirectUri(),
+  post_logout_redirect_uri: redirectUri(),
+  response_type: "code",
+  scope: "openid profile email",
+  userStore: new WebStorageStateStore({ store: window.sessionStorage }),
+  automaticSilentRenew: true,
 });
 
-function readStorage(): StoredSession | null {
-  if (typeof window === "undefined") return null;
+// ponytail: Keycloak's ID token (User.profile) doesn't carry realm_access —
+// only the access token does, unless a custom "ID token" mapper is added.
+// Decoding the access token's JWT payload is simpler than adding a realm
+// protocol mapper in Task 1's Keycloak config, so roles are read from there.
+function rolesOf(u: User): RoleName[] {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as StoredSession;
-    if (!parsed?.accessToken || !parsed?.refreshToken) return null;
-    return parsed;
+    const payload = u.access_token.split(".")[1];
+    const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))) as {
+      realm_access?: { roles?: string[] };
+    };
+    return decoded.realm_access?.roles ?? [];
   } catch {
-    return null;
+    return [];
   }
 }
 
-function writeStorage(session: StoredSession | null) {
-  if (typeof window === "undefined") return;
-  if (!session) {
-    window.localStorage.removeItem(STORAGE_KEY);
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+function toAuthUser(u: User): AuthUser {
+  return {
+    id: u.profile.sub,
+    username: (u.profile.preferred_username as string | undefined) ?? u.profile.sub,
+    full_name: u.profile.name as string | undefined,
+    email: u.profile.email as string | undefined,
+    roles: rolesOf(u),
+  };
 }
 
-function setSession(next: StoredSession | null) {
-  state.session = next;
-  writeStorage(next);
-}
+const state = reactive<{ oidcUser: User | null }>({ oidcUser: null });
 
-function baseApiRoot() {
-  if (typeof window === "undefined") return "";
-  const host = import.meta.env.DEV ? window.location.hostname : window.location.host;
-  return `${window.location.protocol}//${host}/iam/api/v1`;
-}
+userManager.events.addUserLoaded((u) => { state.oidcUser = u; });
+userManager.events.addUserUnloaded(() => { state.oidcUser = null; });
+userManager.events.addSilentRenewError((err) => {
+  console.error("[Auth] Silent renew failed:", err);
+});
 
-function candidateUrls(path: string): string[] {
-  const normalized = path.startsWith("/") ? path : `/${path}`;
-  const root = baseApiRoot();
-  if (!root) return [];
+let restorePromise: Promise<void> | null = null;
 
-  if (normalized.startsWith("/iam/")) {
-    return [`${root}${normalized}`];
-  }
-
-  return [`${root}/iam${normalized}`, `${root}${normalized}`];
-}
-
-async function fetchWithFallback<T>(path: string, options: RequestInit): Promise<T> {
-  const urls = candidateUrls(path);
-  let lastErr: unknown;
-
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          ...(options.headers || {}),
-        },
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        const maybeJson = tryParseJson(text);
-        const err: any = new Error(maybeJson?.error || text || `HTTP ${res.status}`);
-        err.status = res.status;
-        err.data = maybeJson;
-        throw err;
-      }
-
-      return (await res.json()) as T;
-    } catch (err: any) {
-      lastErr = err;
-      const status = Number(err?.status ?? 0);
-      if (status !== 404 && status !== 405) {
-        throw err;
-      }
-    }
-  }
-
-  throw lastErr ?? new Error("IAM request failed");
-}
-
-function tryParseJson(text: string): any {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
-function tokenExpiringSoon() {
-  const exp = state.session?.expiresAt ?? 0;
-  return Date.now() + 20_000 >= exp;
+async function doRestore(): Promise<void> {
+  const u = await userManager.getUser();
+  if (u && !u.expired) state.oidcUser = u;
 }
 
 export function useAuth() {
-  function restoreSession() {
-    if (!state.session) {
-      state.session = readStorage();
-    }
+  function restoreSession(): Promise<void> {
+    if (!restorePromise) restorePromise = doRestore();
+    return restorePromise;
   }
 
-  function clearSession() {
-    setSession(null);
-  }
-
-  async function login(username: string, password: string) {
-    const resp = await fetchWithFallback<LoginResponse>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username, password }),
+  async function login(returnPath?: string) {
+    await userManager.signinRedirect({
+      state: { returnPath: returnPath ?? (window.location.hash.replace(/^#/, "") || "/") },
     });
-
-    setSession({
-      accessToken: resp.access_token,
-      refreshToken: resp.refresh_token,
-      expiresAt: Date.now() + Math.max(5, resp.expires_in) * 1000,
-      user: resp.user ?? null,
-    });
-
-    return resp.user ?? null;
-  }
-
-  async function refreshIfNeeded(force = false) {
-    if (!state.session?.refreshToken) return false;
-    if (!force && !tokenExpiringSoon()) return true;
-
-    const resp = await fetchWithFallback<RefreshResponse>("/auth/refresh", {
-      method: "POST",
-      body: JSON.stringify({ refresh_token: state.session.refreshToken }),
-    });
-
-    setSession({
-      accessToken: resp.access_token,
-      refreshToken: state.session.refreshToken,
-      expiresAt: Date.now() + Math.max(5, resp.expires_in) * 1000,
-      user: state.session.user,
-    });
-
-    return true;
   }
 
   async function logout() {
-    const s = state.session;
-    if (s?.refreshToken && s?.accessToken) {
-      try {
-        await fetchWithFallback("/auth/logout", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${s.accessToken}` },
-          body: JSON.stringify({ refresh_token: s.refreshToken }),
-        });
-      } catch {
-        // Ignore transport failure; local session will still be cleared.
-      }
-    }
-    clearSession();
+    await userManager.signoutRedirect();
   }
 
   function hasAnyRole(roles: RoleName[]) {
-    const userRoles = state.session?.user?.roles ?? [];
+    const userRoles = state.oidcUser ? rolesOf(state.oidcUser) : [];
     return roles.some((r) => userRoles.includes(r));
   }
 
   return {
-    session: state,
     get isLoggedIn() {
-      return Boolean(state.session?.accessToken);
+      return Boolean(state.oidcUser && !state.oidcUser.expired);
     },
     get user() {
-      return state.session?.user ?? null;
+      return state.oidcUser ? toAuthUser(state.oidcUser) : null;
+    },
+    get accessToken() {
+      return state.oidcUser?.access_token ?? "";
     },
     restoreSession,
     login,
     logout,
-    refreshIfNeeded,
-    clearSession,
     hasAnyRole,
   };
+}
+
+/** Called once from main.ts when the page loads with an OIDC `code`/`state` in the query string. */
+export async function handleAuthCallback(): Promise<string> {
+  const result = await userManager.signinRedirectCallback();
+  const u = await userManager.getUser();
+  if (u) state.oidcUser = u;
+  const returnState = result.state as { returnPath?: string } | undefined;
+  return returnState?.returnPath ?? "/";
 }
