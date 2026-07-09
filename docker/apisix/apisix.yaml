@@ -13,6 +13,7 @@ routes:
         client_id: apisix-introspection
         client_secret: apisix-introspection-secret-change-me
         discovery: http://keycloak:8080/realms/scg/.well-known/openid-configuration
+        introspection_endpoint: http://keycloak:8080/realms/scg/protocol/openid-connect/token/introspect
         bearer_only: true
         realm: scg
     upstream:
@@ -27,6 +28,7 @@ routes:
         client_id: apisix-introspection
         client_secret: apisix-introspection-secret-change-me
         discovery: http://keycloak:8080/realms/scg/.well-known/openid-configuration
+        introspection_endpoint: http://keycloak:8080/realms/scg/protocol/openid-connect/token/introspect
         bearer_only: true
         realm: scg
     upstream:
@@ -41,6 +43,7 @@ routes:
         client_id: apisix-introspection
         client_secret: apisix-introspection-secret-change-me
         discovery: http://keycloak:8080/realms/scg/.well-known/openid-configuration
+        introspection_endpoint: http://keycloak:8080/realms/scg/protocol/openid-connect/token/introspect
         bearer_only: true
         realm: scg
     upstream:
@@ -55,6 +58,7 @@ routes:
         client_id: apisix-introspection
         client_secret: apisix-introspection-secret-change-me
         discovery: http://keycloak:8080/realms/scg/.well-known/openid-configuration
+        introspection_endpoint: http://keycloak:8080/realms/scg/protocol/openid-connect/token/introspect
         bearer_only: true
         realm: scg
     upstream:
