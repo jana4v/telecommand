@@ -50,7 +50,7 @@ export default defineNuxtConfig({
       // proxied) — the OIDC redirect flow works cross-origin by design.
       // Override via NUXT_PUBLIC_KEYCLOAK_URL/_REALM/_CLIENT_ID in .env.
       keycloakUrl:      'http://localhost:8080',
-      keycloakRealm:    'mainframe',
+      keycloakRealm:    'scg',
       keycloakClientId: 'tm-tc-spa',
     },
   },
@@ -126,7 +126,7 @@ export default defineNuxtConfig({
     ['@vite-pwa/nuxt', {
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Mainframe GUI',
+        name: 'SCG GUI',
         short_name: 'GUI',
         display: 'standalone',
         start_url: '/',
