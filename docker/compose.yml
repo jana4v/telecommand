@@ -1,4 +1,4 @@
-# Mainframe full-stack deployment
+# SCG full-stack deployment
 # Usage (from the docker/ directory):
 #   docker compose up -d                  # start core stack
 #   docker compose --profile storage up -d  # include InfluxDB + storage service
@@ -7,7 +7,7 @@
 # Config files in ./config/ are bind-mounted into each Go service.
 # Edit them to change runtime settings without rebuilding images.
 
-name: mainframe
+name: scg
 
 services:
 
@@ -63,9 +63,9 @@ services:
       DOCKER_INFLUXDB_INIT_MODE:     setup
       DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_ADMIN_USER:-admin}
       DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_ADMIN_PASSWORD:-Admin@123!}
-      DOCKER_INFLUXDB_INIT_ORG:      ${INFLUX_ORG:-mainframe}
+      DOCKER_INFLUXDB_INIT_ORG:      ${INFLUX_ORG:-scg}
       DOCKER_INFLUXDB_INIT_BUCKET:   ${INFLUX_BUCKET:-telemetry}
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:-mainframe-influx-token-change-me}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:-scg-influx-token-change-me}
     volumes:
       - influxdb_data:/var/lib/influxdb2
     healthcheck:
@@ -96,7 +96,7 @@ services:
   # ---------------------------------------------------------------------------
 
   gateway:
-    image: mainframe/gateway:latest
+    image: scg/gateway:latest
     volumes:
       - ./config/gateway.yaml:/config.yaml:ro
     # gateway uses positional arg (os.Args[1]) not --config flag
@@ -107,7 +107,7 @@ services:
     restart: unless-stopped
 
   ingest:
-    image: mainframe/ingest:latest
+    image: scg/ingest:latest
     volumes:
       - ./config/ingest.yaml:/config.yaml:ro
     command: ["--config", "/config.yaml"]
@@ -117,7 +117,7 @@ services:
     restart: unless-stopped
 
   chainmon:
-    image: mainframe/chainmon:latest
+    image: scg/chainmon:latest
     volumes:
       - ./config/chainmon.yaml:/config.yaml:ro
     command: ["--config", "/config.yaml"]
@@ -126,7 +126,7 @@ services:
     restart: unless-stopped
 
   evaluator:
-    image: mainframe/evaluator:latest
+    image: scg/evaluator:latest
     volumes:
       - ./config/evaluator.yaml:/config.yaml:ro
     command: ["/config.yaml"]
@@ -135,7 +135,7 @@ services:
     restart: unless-stopped
 
   comparator:
-    image: mainframe/comparator:latest
+    image: scg/comparator:latest
     volumes:
       - ./config/comparator.yaml:/config.yaml:ro
     command: ["--config", "/config.yaml"]
@@ -145,7 +145,7 @@ services:
     restart: unless-stopped
 
   limiter:
-    image: mainframe/limiter:latest
+    image: scg/limiter:latest
     volumes:
       - ./config/limiter.yaml:/config.yaml:ro
     command: ["--config", "/config.yaml"]
@@ -155,7 +155,7 @@ services:
     restart: unless-stopped
 
   simulator:
-    image: mainframe/simulator:latest
+    image: scg/simulator:latest
     volumes:
       - ./config/simulator.yaml:/config.yaml:ro
     command: ["--config", "/config.yaml"]
@@ -165,7 +165,7 @@ services:
     restart: unless-stopped
 
   storage:
-    image: mainframe/storage:latest
+    image: scg/storage:latest
     volumes:
       - ./config/storage.yaml:/config.yaml:ro
     command: ["--config", "/config.yaml"]
@@ -177,7 +177,7 @@ services:
     restart: unless-stopped
 
   umacs-tc:
-    image: mainframe/umacs-tc:latest
+    image: scg/umacs-tc:latest
     volumes:
       - ./config/umacs-tc.yaml:/config.yaml:ro
     command: ["--config", "/config.yaml"]
@@ -211,7 +211,7 @@ services:
   # ---------------------------------------------------------------------------
 
   spa:
-    image: mainframe/gui:latest
+    image: scg/gui:latest
     restart: unless-stopped
 
 # ---------------------------------------------------------------------------
@@ -227,4 +227,4 @@ volumes:
 # ---------------------------------------------------------------------------
 networks:
   default:
-    name: mainframe-net
+    name: scg-net

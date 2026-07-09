@@ -15,7 +15,7 @@ postgres:
 influx:
   url: "http://influxdb:8086"
   token: ""
-  org: mainframe
+  org: scg
   database: telemetry
 
 poll_interval_ms: 500
