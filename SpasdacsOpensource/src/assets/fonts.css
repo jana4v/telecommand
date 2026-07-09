@@ -1,0 +1,20 @@
+@font-face {
+  font-family: 'Digital7';
+  src: url('../fonts/digital_7/digital-7.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+.spasdacs-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+.spasdacs-title .nova {
+  color: #00eaff;
+  text-shadow: 0 0 8px #00eaff, 0 0 16px #0077ff;
+  margin-left: 8px;
+}

@@ -1,0 +1,252 @@
+
+--- PAGE 1 ---
+ 
+FUNCTIONAL REQUIREMENTS DOCUMENT
+Spacecraft Status Display and Commanding Software 1.0 
+Doc. No: SCG-GRCD2-SW-2021-01
+Version : 1.0 
+ 
+1 
+URSC QUALITY POLICY: COMMITTED TO TOTAL QUALITY AND ZERO DEFECT IN SPACE SYSTEMS AND SERVICES 
+ 
+ 
+Functional Requirements Document 
+ 
+SPAcecraft Status Display And Commanding Software 
+(SPASDACS) 1.0 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+GEOSAT RF & Payload Checkout Division-2 
+Spacecraft Checkout Group 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+AUGUST 2021 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+UR RAO SATELLITE CENTRE 
+INDIAN SPACE RESEARCH ORGANISATION 
+BANGALORE 
+
+--- PAGE 2 ---
+ 
+FUNCTIONAL REQUIREMENTS DOCUMENT
+Spacecraft Status Display and Commanding Software 1.0 
+Doc. No: SCG-GRCD2-SW-2021-01
+Version : 1.0 
+ 
+2 
+URSC QUALITY POLICY: COMMITTED TO TOTAL QUALITY AND ZERO DEFECT IN SPACE SYSTEMS AND SERVICES 
+ 
+ 
+ 
+
+--- PAGE 3 ---
+ 
+FUNCTIONAL REQUIREMENTS DOCUMENT
+Spacecraft Status Display and Commanding Software 1.0 
+Doc. No: SCG-GRCD2-SW-2021-01
+Version : 1.0 
+ 
+3 
+URSC QUALITY POLICY: COMMITTED TO TOTAL QUALITY AND ZERO DEFECT IN SPACE SYSTEMS AND SERVICES 
+ 
+CHANGE HISTORY 
+ 
+Version 
+Number 
+Date 
+Affected Section, 
+Figure, Table 
+Nature of 
+change 
+[A,M,D] * 
+Description 
+1.0 
+02/08/2021 
+- 
+New 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+* A ? Addition, D ? Deletion, M-Modification 
+ 
+ 
+ 
+ 
+ 
+
+--- PAGE 4 ---
+ 
+FUNCTIONAL REQUIREMENTS DOCUMENT
+Spacecraft Status Display and Commanding Software 1.0 
+Doc. No: SCG-GRCD2-SW-2021-01
+Version : 1.0 
+ 
+4 
+URSC QUALITY POLICY: COMMITTED TO TOTAL QUALITY AND ZERO DEFECT IN SPACE SYSTEMS AND SERVICES 
+ 
+ 
+TABLE OF CONTENTS 
+Contents 
+1. 
+Introduction ................................................................................................................. 5 
+2. 
+Scope ........................................................................................................................... 5 
+3. 
+System Overview ........................................................................................................ 5 
+4. 
+User Roles ................................................................................................................... 5 
+5. 
+Functional Requirements ............................................................................................ 5 
+6. 
+User Workflow............................................................................................................ 6 
+7. 
+Graphical User Interface Overview ............................................................................ 6 
+8. 
+Future Enhancements .................................................................................................. 6 
+ 
+ 
+List of Tables 
+Table 1 Functional Requirements ....................................................................................... 6 
+ 
+
+--- PAGE 5 ---
+ 
+FUNCTIONAL REQUIREMENTS DOCUMENT
+Spacecraft Status Display and Commanding Software 1.0 
+Doc. No: SCG-GRCD2-SW-2021-01
+Version : 1.0 
+ 
+5 
+URSC QUALITY POLICY: COMMITTED TO TOTAL QUALITY AND ZERO DEFECT IN SPACE SYSTEMS AND SERVICES 
+ 
+1. Introduction 
+ 
+This document describes the functional requirements of the Spacecraft Status Display and 
+Commanding Software (SPASDACS). The system provides a graphical interface to 
+visualize spacecraft subsystem telemetry using interactive block diagrams. 
+ 
+2. Scope 
+ 
+SPASDACS enables engineers to design subsystem block diagrams and monitor 
+spacecraft telemetry in real time. The software will be used during spacecraft checkout 
+and testing activities. 
+ 
+3. System Overview 
+ 
+The system displays spacecraft subsystems as graphical blocks. Telemetry data is linked 
+to these blocks and the visual attributes change dynamically based on telemetry values. 
+This allows engineers to quickly assess subsystem status. 
+ 
+4. User Roles 
+? 
+Admin 
+Create and edit subsystem diagrams 
+Associate telemetry parameters with diagram elements 
+Configure visualization rules and alerts 
+? 
+User / Guest 
+View real-time subsystem diagrams 
+Monitor telemetry alerts and system status 
+5. Functional Requirements 
+ 
+Requirement 
+ID 
+Description 
+FR-01 
+The system shall allow users to create subsystem block diagrams using basic shapes 
+such as rectangles, circles, ellipses, triangles and lines. 
+FR-02 
+The system shall allow users to import custom shapes or images into the diagram. 
+FR-03 
+The system shall allow telemetry parameters to be associated with diagram 
+elements. 
+FR-04 
+The system shall update visual attributes such as color, visibility, and size based on 
+telemetry values. 
+FR-05 
+The system shall display real-time telemetry updates. 
+FR-06 
+The system shall support multiple schematic pages. 
+
+--- PAGE 6 ---
+ 
+FUNCTIONAL REQUIREMENTS DOCUMENT
+Spacecraft Status Display and Commanding Software 1.0 
+Doc. No: SCG-GRCD2-SW-2021-01
+Version : 1.0 
+ 
+6 
+URSC QUALITY POLICY: COMMITTED TO TOTAL QUALITY AND ZERO DEFECT IN SPACE SYSTEMS AND SERVICES 
+ 
+FR-07 
+The system shall display telemetry values when the user hovers over a subsystem 
+block. 
+FR-08 
+The system shall generate visual and audio alerts when telemetry limits are 
+exceeded. 
+FR-09 
+The system shall notify users when telemetry data links are lost. 
+FR-10 
+The system shall visually indicate subsystem state changes. 
+Table 1 Functional Requirements 
+ 
+ 
+ 
+ 
+6. User Workflow 
+ 
+1. User launches the SPASDACS application. 
+2. User loads or creates a subsystem block diagram. 
+3. Telemetry parameters are linked to diagram elements. 
+4. The system subscribes to telemetry data streams. 
+5. Incoming telemetry updates modify the visual state of blocks. 
+6. Alerts are generated if telemetry values cross defined limits. 
+ 
+7. Graphical User Interface Overview 
+ 
+The graphical interface consists of the following components: 
+1. Diagram editor for creating subsystem block diagrams 
+2. Shape palette for inserting graphical components 
+3. Telemetry association panel 
+4. Real-time monitoring display 
+5. Alert notification panel 
+ 
+8. Future Enhancements 
+1. Direct telecommand capability from graphical interface 
+2. Advanced telemetry analytics 
+3. Custom subsystem component libraries 
+4. Remote web-based monitoring dashboards 
+ 

@@ -23,3 +23,6 @@ GUI/.output/
 GUI/.data/
 
 docker/images/*.tar
+
+SpasdacsOpensource/node_modules/
+SpasdacsOpensource/dist/
