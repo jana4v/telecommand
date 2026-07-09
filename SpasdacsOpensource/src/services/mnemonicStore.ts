@@ -1,13 +1,13 @@
 /**
  * mnemonicStore — reactive singleton for Gateway mnemonic catalog.
  *
- * Endpoints used:
- *   GET <gatewayUrl>/telemetry/subsystems                   → { subsystems: string[] }
+ * Endpoints used (matching the real gateway's router.go — there is no single
+ * "all subsystems, with metadata" endpoint, so the catalog is built by
+ * looping /get/tm/details/{subsystem} over the subsystem list):
+ *   GET <gatewayUrl>/get/tm/subsystems                     → { subsystems: string[] }
  *   GET <gatewayUrl>/tm/mnemonics                           → liveMnemonics  (Redis live key list)
- *   GET <gatewayUrl>/mnemonics/tm                           → mnemonicCatalog (MongoDB with metadata)
- *   GET <gatewayUrl>/mnemonics/tm/id_to_mnemonic_mapping    → Record<paramId, mnemonic>
- *   GET <gatewayUrl>/get/mnemonics/tm/{subsystem}           → string[]
- *   GET <gatewayUrl>/get/mnemonics/tm/{sub}/{mnem}/range    → string[]
+ *   GET <gatewayUrl>/get/tm/details/{subsystem}             → tmDetailRow[] (looped per subsystem for mnemonicCatalog)
+ *   GET <gatewayUrl>/get/tm/pid_mnemonic_list                → string[] of "{pid}_{mnemonic}", parsed into Record<paramId, mnemonic>
  *
  *   gatewayUrl default: http://<window.location.hostname>/api/go/v1  (nginx, port 80)
  *
@@ -123,7 +123,7 @@ export async function loadMnemonics(force = false, url?: string): Promise<void> 
     // These are small and give us the live-key list we use to version the
     // IndexedDB cache, so we can decide whether to skip the heavy fetches.
     const [subsysRes, liveRes] = await Promise.allSettled([
-      fetch(`${base}/telemetry/subsystems`),
+      fetch(`${base}/get/tm/subsystems`),
       fetch(`${base}/tm/mnemonics`),
     ]);
 
@@ -166,40 +166,51 @@ export async function loadMnemonics(force = false, url?: string): Promise<void> 
     }
 
     // ── Cache miss (or forced refresh): fetch the heavy payloads ──────────
-    const [catalogRes, mappingRes] = await Promise.allSettled([
-      fetch(`${base}/mnemonics/tm`),
-      fetch(`${base}/mnemonics/tm/id_to_mnemonic_mapping`),
+    // No single "all subsystems, with metadata" endpoint exists on the real
+    // gateway — /get/tm/details/{subsystem} is subsystem-scoped only, so the
+    // full catalog is built by looping the subsystem list fetched above.
+    const subsystemNames = subsystems.value;
+    const [detailResults, mappingRes] = await Promise.allSettled([
+      Promise.allSettled(subsystemNames.map((s) => fetch(`${base}/get/tm/details/${encodeURIComponent(s)}`))),
+      fetch(`${base}/get/tm/pid_mnemonic_list`),
     ]);
 
-    // ── Rich catalog (/mnemonics/tm) ──────────────────────────────────────
+    // ── Rich catalog (/get/tm/details/{subsystem}, looped per subsystem) ───
     let catalog: MnemonicInfo[] = mnemonicCatalog.value;
-    if (catalogRes.status === "fulfilled" && catalogRes.value.ok) {
-      const raw = await catalogRes.value.json();
-      // Support both a flat array and a paginated wrapper { data: [...] } or { mnemonics: [...] }
-      const rows: unknown[] = Array.isArray(raw)
-        ? raw
-        : Array.isArray((raw as any).data)      ? (raw as any).data
-        : Array.isArray((raw as any).mnemonics)  ? (raw as any).mnemonics
-        : [];
-      catalog = (rows as Array<Record<string, unknown>>)
-        .map((d) => ({
-          mnemonic:  (d.cdbMnemonic ?? d.mnemonic ?? "") as string,
-          subsystem: d.subsystem as string | undefined,
-          type:      d.type      as string | undefined,
-          unit:      d.unit      as string | undefined,
-        }))
-        .filter((d) => d.mnemonic !== "");
-      mnemonicCatalog.value = catalog;
+    if (detailResults.status === "fulfilled") {
+      const rows: Array<Record<string, unknown>> = [];
+      for (const res of detailResults.value) {
+        if (res.status === "fulfilled" && res.value.ok) {
+          const data = (await res.value.json()) as Array<Record<string, unknown>>;
+          if (Array.isArray(data)) rows.push(...data);
+        }
+      }
+      if (rows.length > 0) {
+        catalog = rows
+          .map((d) => ({
+            mnemonic:  (d.mnemonic ?? "") as string,
+            subsystem: d.subsystem as string | undefined,
+            type:      d.parameter_type as string | undefined,
+            unit:      undefined as string | undefined,
+          }))
+          .filter((d) => d.mnemonic !== "");
+        mnemonicCatalog.value = catalog;
+      }
     }
 
-    // ── ParamId -> mnemonic mapping (/mnemonics/tm/id_to_mnemonic_mapping) ──
+    // ── ParamId -> mnemonic mapping (/get/tm/pid_mnemonic_list, "{pid}_{mnemonic}") ──
     let mapping: Record<string, string> = paramIdMnemonicMap.value;
     if (mappingRes.status === "fulfilled" && mappingRes.value.ok) {
-      const raw = await mappingRes.value.json();
-      if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      const raw = (await mappingRes.value.json()) as unknown;
+      if (Array.isArray(raw)) {
         const out: Record<string, string> = {};
-        for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-          if (typeof value === "string" && value.trim()) out[key] = value;
+        for (const entry of raw) {
+          if (typeof entry !== "string") continue;
+          const idx = entry.indexOf("_");
+          if (idx <= 0) continue;
+          const pid = entry.slice(0, idx);
+          const mnemonic = entry.slice(idx + 1);
+          if (pid && mnemonic) out[pid] = mnemonic;
         }
         mapping = out;
         paramIdMnemonicMap.value = out;
