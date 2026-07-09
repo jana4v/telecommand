@@ -4,10 +4,27 @@
   "sslRequired": "none",
   "roles": {
     "realm": [
-      { "name": "tm-tc-user", "description": "Standard TM/TC application user" }
+      { "name": "tm-tc-user", "description": "Standard TM/TC application user" },
+      { "name": "viewer", "description": "SPASDACS read-only diagram access" },
+      { "name": "operator", "description": "SPASDACS diagram edit access" },
+      { "name": "admin", "description": "SPASDACS diagram edit access (admin tier)" },
+      { "name": "super_admin", "description": "SPASDACS diagram edit access (super-admin tier)" }
     ]
   },
   "clients": [
+    {
+      "clientId": "spasdacs-spa",
+      "name": "SPASDACS SPA",
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["*"],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
     {
       "clientId": "tm-tc-spa",
       "name": "TM-TC SPA",
@@ -45,7 +62,7 @@
       "credentials": [
         { "type": "password", "value": "Operator@123!", "temporary": false }
       ],
-      "realmRoles": ["tm-tc-user"]
+      "realmRoles": ["tm-tc-user", "operator"]
     }
   ]
 }
