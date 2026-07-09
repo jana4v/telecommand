@@ -3,6 +3,7 @@ import { router } from "./router/index";
 import App from "./App.vue";
 import "./assets/fonts.css";
 import { handleAuthCallback } from "./services/auth";
+import "./services/apiAuth";
 
 async function bootstrap() {
   const params = new URLSearchParams(window.location.search);
