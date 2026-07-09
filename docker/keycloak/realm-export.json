@@ -1,5 +1,5 @@
 {
-  "realm": "mainframe",
+  "realm": "scg",
   "enabled": true,
   "sslRequired": "none",
   "roles": {

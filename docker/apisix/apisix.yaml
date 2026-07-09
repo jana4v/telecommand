@@ -12,9 +12,9 @@ routes:
       openid-connect:
         client_id: apisix-introspection
         client_secret: apisix-introspection-secret-change-me
-        discovery: http://keycloak:8080/realms/mainframe/.well-known/openid-configuration
+        discovery: http://keycloak:8080/realms/scg/.well-known/openid-configuration
         bearer_only: true
-        realm: mainframe
+        realm: scg
     upstream:
       type: roundrobin
       nodes:
@@ -26,9 +26,9 @@ routes:
       openid-connect:
         client_id: apisix-introspection
         client_secret: apisix-introspection-secret-change-me
-        discovery: http://keycloak:8080/realms/mainframe/.well-known/openid-configuration
+        discovery: http://keycloak:8080/realms/scg/.well-known/openid-configuration
         bearer_only: true
-        realm: mainframe
+        realm: scg
     upstream:
       type: roundrobin
       nodes:
@@ -40,9 +40,9 @@ routes:
       openid-connect:
         client_id: apisix-introspection
         client_secret: apisix-introspection-secret-change-me
-        discovery: http://keycloak:8080/realms/mainframe/.well-known/openid-configuration
+        discovery: http://keycloak:8080/realms/scg/.well-known/openid-configuration
         bearer_only: true
-        realm: mainframe
+        realm: scg
     upstream:
       type: roundrobin
       nodes:
@@ -54,9 +54,9 @@ routes:
       openid-connect:
         client_id: apisix-introspection
         client_secret: apisix-introspection-secret-change-me
-        discovery: http://keycloak:8080/realms/mainframe/.well-known/openid-configuration
+        discovery: http://keycloak:8080/realms/scg/.well-known/openid-configuration
         bearer_only: true
-        realm: mainframe
+        realm: scg
     upstream:
       type: roundrobin
       nodes:
