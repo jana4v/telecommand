@@ -74,4 +74,11 @@ routes:
       nodes:
         "nats:4223": 1
 
+  - id: spasdacs
+    uri: /spasdacs/*
+    upstream:
+      type: roundrobin
+      nodes:
+        "spasdacs:80": 1
+
 #END

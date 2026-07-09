@@ -199,6 +199,7 @@ services:
       - "${GUI_PORT:-80}:9080"
     depends_on:
       - spa
+      - spasdacs
       - gateway
       - simulator
       - umacs-tc
@@ -212,6 +213,14 @@ services:
 
   spa:
     image: scg/gui:latest
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # SPASDACS — spacecraft diagram visualization SPA, served under /spasdacs/
+  # ---------------------------------------------------------------------------
+
+  spasdacs:
+    image: scg/spasdacs:latest
     restart: unless-stopped
 
 # ---------------------------------------------------------------------------

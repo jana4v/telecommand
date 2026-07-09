@@ -2,9 +2,10 @@
 #  2-save.ps1 - Export all Docker images to .tar files
 #
 #  Run this on the internet-connected build machine AFTER 1-build.ps1.
-#  Outputs to docker/images/ (3 tar files):
+#  Outputs to docker/images/ (4 tar files):
 #    scg-apps.tar        - all Go microservice images
 #    scg-gui.tar          - static Nuxt SPA image (nginx, no proxying)
+#    scg-spasdacs.tar    - static SPASDACS SPA image (nginx, no proxying)
 #    infra.tar           - postgres, redis, nats, influxdb, alpine base
 #
 #  Transfer the entire docker/ folder to the offline PC, then run 3-load.ps1.
@@ -35,6 +36,10 @@ $AppImages = @(
 
 $GuiImages = @(
     "scg/gui:latest"
+)
+
+$SpasdacsImages = @(
+    "scg/spasdacs:latest"
 )
 
 $InfraImages = @(
@@ -84,6 +89,11 @@ Write-Host "  Saving GUI image -> scg-gui.tar ..." -ForegroundColor Yellow
 docker save $GuiImages -o (Join-Path $OutDir "scg-gui.tar")
 if ($LASTEXITCODE -ne 0) { throw "Failed to save GUI image" }
 Write-Host "  [OK] scg-gui.tar" -ForegroundColor Green
+
+Write-Host "  Saving SPASDACS image -> scg-spasdacs.tar ..." -ForegroundColor Yellow
+docker save $SpasdacsImages -o (Join-Path $OutDir "scg-spasdacs.tar")
+if ($LASTEXITCODE -ne 0) { throw "Failed to save SPASDACS image" }
+Write-Host "  [OK] scg-spasdacs.tar" -ForegroundColor Green
 
 Write-Host "  Saving infra images -> infra.tar ..." -ForegroundColor Yellow
 docker save $InfraImages -o (Join-Path $OutDir "infra.tar")

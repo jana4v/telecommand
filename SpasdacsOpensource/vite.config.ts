@@ -30,7 +30,7 @@ export default defineConfig({
     include: ["monaco-editor"],
   },
   build: {
-    outDir: "../GoLang New/dist/web/spasdacs",
+    outDir: "../ui/dist/spasdacs",
     emptyOutDir: true,
     // Heavy vendor libraries are split into their own chunks so they cache
     // independently of app code and don't bloat the entry chunk. Monaco
@@ -58,10 +58,6 @@ export default defineConfig({
     proxy: {
       "/api/go/v1": {
         target: "http://localhost:21000",
-        changeOrigin: true,
-      },
-      "/iam/api/v1": {
-        target: "http://localhost:21005",
         changeOrigin: true,
       },
     },

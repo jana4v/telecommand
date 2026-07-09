@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1
+# Build context: repo root (tm_tc/)
+#
+# Two-stage build:
+#   1. Node builder — runs "npm run build" to produce the Vite static assets
+#   2. nginx runtime — serves those assets under /spasdacs/
+
+###############################################################################
+# Stage 1 — Build the SPASDACS static bundle
+###############################################################################
+FROM node:22-alpine AS spasdacs-builder
+
+WORKDIR /app/SpasdacsOpensource
+
+COPY SpasdacsOpensource/ ./
+RUN npm install --legacy-peer-deps
+
+# vite.config.ts sets build.outDir to '../ui/dist/spasdacs' (relative to
+# SpasdacsOpensource/), so the build lands at /app/ui/dist/spasdacs/
+RUN npm run build
+
+###############################################################################
+# Stage 2 — nginx runtime serving the static bundle under /spasdacs/
+###############################################################################
+FROM nginx:1.27-alpine AS spasdacs
+
+# vite.config.ts's base:'/spasdacs/' means every built asset URL is prefixed
+# with /spasdacs/ — placing the files under that same subdirectory of the
+# nginx document root makes those absolute paths resolve correctly.
+COPY --from=spasdacs-builder /app/ui/dist/spasdacs/ /usr/share/nginx/html/spasdacs/
+
+COPY docker/nginx/spasdacs.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80

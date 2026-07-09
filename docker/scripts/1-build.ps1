@@ -23,6 +23,7 @@ $DockerDir  = $PSScriptRoot | Split-Path -Parent  # docker/
 $RepoRoot   = $DockerDir    | Split-Path -Parent  # tm_tc/ (build context)
 $GoFile     = Join-Path $DockerDir "Dockerfile.go"
 $GuiFile    = Join-Path $DockerDir "Dockerfile.gui"
+$SpasdacsFile = Join-Path $DockerDir "Dockerfile.spasdacs"
 
 # Go service targets
 $GoServices = @(
@@ -70,8 +71,9 @@ function Build-Image {
 Write-Header
 
 # Determine what to build
-$buildGo  = ($Services.Count -eq 0) -or ($Services | Where-Object { $_ -ne "gui" })
-$buildGui = ($Services.Count -eq 0) -or ($Services -contains "gui")
+$buildGo       = ($Services.Count -eq 0) -or ($Services | Where-Object { $_ -notin @("gui", "spasdacs") })
+$buildGui      = ($Services.Count -eq 0) -or ($Services -contains "gui")
+$buildSpasdacs = ($Services.Count -eq 0) -or ($Services -contains "spasdacs")
 
 # Filter Go services if specific ones were requested
 if ($Services.Count -gt 0) {
@@ -95,6 +97,15 @@ if ($buildGui) {
     Write-Host "  (First build downloads npm packages - takes a few minutes)" -ForegroundColor DarkGray
     Write-Host ""
     Build-Image -Tag "scg/gui:latest" -Dockerfile $GuiFile
+}
+
+# Build SPASDACS image (downloads npm packages + runs vite build)
+if ($buildSpasdacs) {
+    Write-Host ""
+    Write-Host "  Building SPASDACS..." -ForegroundColor Cyan
+    Write-Host "  (First build downloads npm packages - takes a few minutes)" -ForegroundColor DarkGray
+    Write-Host ""
+    Build-Image -Tag "scg/spasdacs:latest" -Dockerfile $SpasdacsFile
 }
 
 Write-Host ""
