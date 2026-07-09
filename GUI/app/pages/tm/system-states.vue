@@ -116,9 +116,7 @@ async function testApiConnection() {
     console.log('\n1️⃣ Testing /get/tm/subsystems endpoint...')
     const subsUrl = `${gatewayBase}/get/tm/subsystems`
     console.log(`   URL: ${subsUrl}`)
-    const subsResponse = await fetch(subsUrl)
-    console.log(`   Status: ${subsResponse.status}`)
-    const subsData = await subsResponse.json()
+    const subsData = await $fetch(subsUrl)
     console.log(`   Response:`, subsData)
     console.log(`   Type: ${typeof subsData}`)
     console.log(`   Is Array: ${Array.isArray(subsData)}`)
@@ -139,9 +137,7 @@ async function testApiConnection() {
       console.log(`\n2️⃣ Testing /get/tm/details/{subsystem} endpoint...`)
       const mnemUrl = `${gatewayBase}/get/tm/details/${encodeURIComponent(testSubsystem)}`
       console.log(`   URL: ${mnemUrl}`)
-      const mnemResponse = await fetch(mnemUrl)
-      console.log(`   Status: ${mnemResponse.status}`)
-      const mnemData = await mnemResponse.json()
+      const mnemData = await $fetch(mnemUrl)
       console.log(`   Response Count: ${Array.isArray(mnemData) ? mnemData.length : 'not array'}`)
       console.log(`   First item:`, Array.isArray(mnemData) ? mnemData[0] : mnemData)
     }

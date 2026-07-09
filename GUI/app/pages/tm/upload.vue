@@ -43,14 +43,10 @@ async function uploadFile() {
       binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
     const base64 = btoa(binary)
 
-    const resp = await fetch(`${gatewayBase}/update/tm/fileupload`, {
+    const data = await $fetch<{ message?: string, stats?: { inserted?: number, updated?: number } }>(`${gatewayBase}/update/tm/fileupload`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename: selectedFile.value.name, data: base64 }),
+      body: { filename: selectedFile.value.name, data: base64 },
     })
-    const data = await resp.json()
-    if (!resp.ok)
-      throw new Error(data?.error ?? `Server error ${resp.status}`)
 
     result.value = {
       success: true,
