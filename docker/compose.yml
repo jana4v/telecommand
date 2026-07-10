@@ -49,6 +49,13 @@ services:
     command: ["-c", "/etc/nats/nats.conf"]
     volumes:
       - ./nats/nats.conf:/etc/nats/nats.conf:ro
+    ports:
+      # Published so the Nuxt dev server (npm run dev on :3000) can connect
+      # directly to ws://localhost:4224 for live TM updates, bypassing the
+      # nginx /nats proxy used in production (see GUI's tm/index.vue).
+      # Host port 4224 (not the container's 4223) — an unrelated stray
+      # nats-server process was already squatting on host 4223.
+      - "4224:4223"
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8222/healthz"]
       interval: 10s

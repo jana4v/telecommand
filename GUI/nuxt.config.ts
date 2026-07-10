@@ -72,7 +72,7 @@ export default defineNuxtConfig({
       proxy: {
         '/api/go/v1': { target: 'http://localhost:21000', changeOrigin: false },
         '/api/v2/tm': { target: 'http://127.0.0.1:8010', changeOrigin: false },
-        '/nats': { target: 'ws://localhost:4223', ws: true, changeOrigin: false },
+        '/nats': { target: 'ws://localhost:4224', ws: true, changeOrigin: false },
       },
     },
     optimizeDeps: {

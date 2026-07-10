@@ -340,11 +340,12 @@ function resubscribeNats() {
       return
 
     try {
-      // In development, connect directly to NATS WS (port 4223) to avoid routing
+      // In development, connect directly to NATS WS (host port 4224, mapped
+      // to the container's 4223 — see docker/compose.yml) to avoid routing
       // through the Nuxt dev server, which crashes Nitro on failed WS upgrades.
       // In production, traffic goes through the reverse proxy (Kong) at /nats.
       const natsWsUrl = import.meta.dev
-        ? 'ws://localhost:4223'
+        ? 'ws://localhost:4224'
         : `ws://${window.location.host}/nats`
       natsClient = await connect({ servers: natsWsUrl })
       resubscribeNats()
