@@ -127,7 +127,7 @@ export async function loadMnemonics(force = false, url?: string): Promise<void> 
       fetch(`${base}/tm/mnemonics`),
     ]);
 
-    // ── Subsystem list (/telemetry/subsystems) ────────────────────────────
+    // ── Subsystem list (/get/tm/subsystems) ────────────────────────────────
     if (subsysRes.status === "fulfilled" && subsysRes.value.ok) {
       const data = (await subsysRes.value.json()) as { subsystems?: string[] };
       subsystems.value = data.subsystems ?? [];
@@ -292,7 +292,7 @@ export async function loadMnemonicsForSubsystem(subsystem: string): Promise<stri
   const base = gatewayUrl.value;
   const request = (async (): Promise<string[]> => {
     try {
-      const res = await fetch(`${base}/get/mnemonics/tm/${encodeURIComponent(key)}`);
+      const res = await fetch(`${base}/get/tm/mnemonic_list/${encodeURIComponent(key)}`);
       if (!res.ok) return [];
       const data = await res.json();
       if (!Array.isArray(data)) return [];
@@ -317,7 +317,10 @@ export async function loadMnemonicsForSubsystem(subsystem: string): Promise<stri
  * Fetch the discrete possible states (range) for a mnemonic.
  * Returns an empty array when the mnemonic is continuous or on error.
  */
-export async function loadMnemonicRange(subsystem: string, mnemonic: string): Promise<string[]> {
+// _subsystem: unused now that the real endpoint (GetTMRangeByPID) takes only
+// a pid — kept as a positional param so the 5 existing call sites don't need
+// to change.
+export async function loadMnemonicRange(_subsystem: string, mnemonic: string): Promise<string[]> {
   const base = gatewayUrl.value;
   // The API accepts the paramId (e.g. "TTC00300") for direct primary-key lookup.
   // Extract the leading paramId from a pid_mnemonic string like "TTC00300_C_TX-1_STS".
@@ -333,12 +336,12 @@ export async function loadMnemonicRange(subsystem: string, mnemonic: string): Pr
     }
   }
   try {
-    const res = await fetch(
-      `${base}/get/mnemonics/tm/${subsystem}/${apiMnemonic}/range`
-    );
+    // GetTMRangeByPID takes only a pid (no subsystem segment) and returns
+    // {pid, mnemonic, range: string[]|null}, not a bare array.
+    const res = await fetch(`${base}/get/tm/${apiMnemonic}/range`);
     if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data) ? (data as string[]) : [];
+    const data = (await res.json()) as { range?: string[] | null };
+    return Array.isArray(data.range) ? data.range : [];
   } catch {
     return [];
   }
@@ -562,7 +565,7 @@ export async function loadPidMnemonicsForSubsystem(subsystem: string): Promise<s
   // PID_MNEMONIC strings, and those should be shown exactly in the dropdown.
   const base = gatewayUrl.value;
   try {
-    const res = await fetch(`${base}/get/mnemonics/tm/${encodeURIComponent(key)}`);
+    const res = await fetch(`${base}/get/tm/pid_mnemonic_list/${encodeURIComponent(key)}`);
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -570,31 +573,40 @@ export async function loadPidMnemonicsForSubsystem(subsystem: string): Promise<s
           .map((v) => String(v ?? "").trim())
           .filter(Boolean);
 
-        const pidLike = raw.filter((v) => {
-          const us = v.indexOf("_");
-          if (us <= 0) return false;
-          const maybeId = v.slice(0, us);
-          return PARAM_ID_RE.test(maybeId);
-        });
+        // raw.length === 0 is treated as a soft failure, not "no PID
+        // mnemonics for this subsystem": the real gateway currently has a
+        // duplicate route registration for
+        // /get/tm/pid_mnemonic_list/{subsystem} (see router.go — a later TC
+        // route silently shadows the TM one this call needs), so it always
+        // returns []. Fall through to local reconstruction below instead of
+        // trusting that as a genuine empty result.
+        if (raw.length > 0) {
+          const pidLike = raw.filter((v) => {
+            const us = v.indexOf("_");
+            if (us <= 0) return false;
+            const maybeId = v.slice(0, us);
+            return PARAM_ID_RE.test(maybeId);
+          });
 
-        if (pidLike.length > 0) {
-          const unique = Array.from(new Set(pidLike));
+          if (pidLike.length > 0) {
+            const unique = Array.from(new Set(pidLike));
+            subsystemPidMnemonicCache.set(key, unique);
+            return unique;
+          }
+
+          // If backend returns plain mnemonic names, expand to PID_MNEMONIC.
+          ensureReverseMnemonicIndex();
+          const expanded: string[] = [];
+          for (const mnem of raw.map((v) => resolveTelemetryKey(v)).filter(Boolean)) {
+            const ids = reverseMnemonicToIds.get(mnem);
+            if (!ids?.length) continue;
+            for (const pid of ids) expanded.push(`${pid}_${mnem}`);
+          }
+          // ponytail: SMON/ADC mnemonics have no paramId → fall back to plain names
+          const unique = Array.from(new Set(expanded.length > 0 ? expanded : raw));
           subsystemPidMnemonicCache.set(key, unique);
           return unique;
         }
-
-        // If backend returns plain mnemonic names, expand to PID_MNEMONIC.
-        ensureReverseMnemonicIndex();
-        const expanded: string[] = [];
-        for (const mnem of raw.map((v) => resolveTelemetryKey(v)).filter(Boolean)) {
-          const ids = reverseMnemonicToIds.get(mnem);
-          if (!ids?.length) continue;
-          for (const pid of ids) expanded.push(`${pid}_${mnem}`);
-        }
-        // ponytail: SMON/ADC mnemonics have no paramId → fall back to plain names
-        const unique = Array.from(new Set(expanded.length > 0 ? expanded : raw));
-        subsystemPidMnemonicCache.set(key, unique);
-        return unique;
       }
     }
   } catch {
