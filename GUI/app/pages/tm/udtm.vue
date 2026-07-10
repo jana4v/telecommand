@@ -1,5 +1,5 @@
 <script setup lang='ts'>
-import type { ColDef, GridApi } from 'ag-grid-community'
+import type { CellSelectionOptions, ColDef, GridApi } from 'ag-grid-community'
 import {
   colorSchemeDarkBlue,
   colorSchemeLightCold,
@@ -8,6 +8,7 @@ import {
 } from 'ag-grid-community'
 import { AllEnterpriseModule } from 'ag-grid-enterprise'
 import { AgGridVue } from 'ag-grid-vue3'
+import * as XLSX from 'xlsx'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import type { ConditionRule } from '@/components/tm/queryBuilderTypes'
 import ConditionEditorWithBuilder from '@/components/tm/ConditionEditorWithBuilder.vue'
@@ -82,6 +83,13 @@ const {
 const listDialogVisible = ref(false)
 const listField = ref<'limitsText' | 'rangeText'>('limitsText')
 const listDraft = ref('')
+
+const addRowCount = ref(1)
+const importFileInputRef = ref<HTMLInputElement | null>(null)
+
+const cellSelection = ref<boolean | CellSelectionOptions>({
+  handle: { mode: 'fill' },
+})
 
 const defaultColDef: ColDef<UdtmUiRow> = {
   sortable: true,
@@ -346,8 +354,90 @@ function onCellValueChanged() {
 }
 
 function addRow() {
-  rowData.value = [...rowData.value, rowTemplate(rowData.value.length)]
+  const count = Math.max(1, Math.floor(addRowCount.value) || 1)
+  const newRows = Array.from({ length: count }, (_, i) => rowTemplate(rowData.value.length + i))
+  rowData.value = [...rowData.value, ...newRows]
   saveLocal(rowData.value)
+}
+
+// Maps a case-insensitive Excel header to the matching grid field. Keys
+// match the grid's displayed headerName values (see columnDefs above).
+const EXCEL_HEADER_TO_FIELD: Record<string, keyof UdtmUiRow> = {
+  pid: 'pid',
+  mnemonic: 'mnemonic',
+  type: 'type',
+  valuelogic: 'valueLogic',
+  resetlogic: 'resetLogic',
+  expectedvalue: 'expectedValue',
+  'ignore chain': 'ignoreChainComparision',
+  'ignore change': 'ignoreChangeDetection',
+  'ignore limit': 'ignoreLimitCheck',
+  limits: 'limitsText',
+  range: 'rangeText',
+  tolerance: 'tolerance',
+}
+
+const UDTM_BOOLEAN_FIELDS = new Set<keyof UdtmUiRow>([
+  'ignoreChainComparision',
+  'ignoreChangeDetection',
+  'ignoreLimitCheck',
+])
+
+function parseBooleanCell(value: unknown): boolean {
+  if (typeof value === 'boolean')
+    return value
+  const normalized = String(value ?? '').trim().toLowerCase()
+  return normalized === 'true' || normalized === '1' || normalized === 'yes'
+}
+
+function excelRowToUdtmRow(raw: Record<string, unknown>, fallbackIndex: number): UdtmUiRow {
+  const row = rowTemplate(fallbackIndex)
+  for (const [header, value] of Object.entries(raw)) {
+    const field = EXCEL_HEADER_TO_FIELD[header.trim().toLowerCase()]
+    if (!field)
+      continue
+    if (UDTM_BOOLEAN_FIELDS.has(field))
+      (row as any)[field] = parseBooleanCell(value)
+    else
+      (row as any)[field] = String(value ?? '').trim()
+  }
+  row.type = row.type.toUpperCase()
+  return row
+}
+
+function triggerImportFile() {
+  importFileInputRef.value?.click()
+}
+
+async function onImportFileSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // allow re-selecting the same file next time
+  if (!file)
+    return
+
+  try {
+    const buffer = await file.arrayBuffer()
+    const workbook = XLSX.read(buffer, { type: 'array' })
+    const sheetName = workbook.SheetNames[0]
+    if (!sheetName)
+      return
+
+    const sheet = workbook.Sheets[sheetName]
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' })
+    const imported = rows.map((r, idx) => excelRowToUdtmRow(r, rowData.value.length + idx))
+    if (imported.length === 0) {
+      message.value = { type: 'error', text: 'No rows found in the selected file.' }
+      return
+    }
+
+    rowData.value = [...rowData.value, ...imported]
+    saveLocal(rowData.value)
+    message.value = { type: 'success', text: `Imported ${imported.length} row(s) from Excel.` }
+  }
+  catch (e: any) {
+    message.value = { type: 'error', text: e?.message ?? 'Failed to import Excel file' }
+  }
 }
 
 function deleteSelectedRows() {
@@ -532,7 +622,16 @@ onMounted(async () => {
     <AppName appname="UDTM (User Defined Telemetry)" />
 
     <div class="controls mt-4">
+      <InputNumber v-model="addRowCount" :min="1" show-buttons button-layout="horizontal" class="add-row-count" />
       <Button label="Add Row" icon="pi pi-plus" @click="addRow" />
+      <Button label="Import from Excel" icon="pi pi-file-excel" outlined @click="triggerImportFile" />
+      <input
+        ref="importFileInputRef"
+        type="file"
+        accept=".xlsx,.xls"
+        class="hidden-file-input"
+        @change="onImportFileSelected"
+      >
       <Button label="Delete Selected" icon="pi pi-trash" severity="danger" outlined @click="deleteSelectedRows" />
       <Button label="Save Changes" icon="pi pi-save" :loading="saving" @click="saveChanges" />
 
@@ -559,6 +658,7 @@ onMounted(async () => {
         :row-data="rowData"
         :column-defs="columnDefs"
         :default-col-def="defaultColDef"
+        :cell-selection="cellSelection"
         row-selection="multiple"
         :stop-editing-when-cells-lose-focus="true"
         :animate-rows="true"
@@ -648,6 +748,14 @@ onMounted(async () => {
 .quick-filter {
   margin-left: auto;
   min-width: 260px;
+}
+
+.add-row-count {
+  width: 6rem;
+}
+
+.hidden-file-input {
+  display: none;
 }
 
 .ag-wrapper {
