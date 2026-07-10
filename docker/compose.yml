@@ -101,6 +101,10 @@ services:
       - ./config/gateway.yaml:/config.yaml:ro
     # gateway uses positional arg (os.Args[1]) not --config flag
     command: ["/config.yaml"]
+    ports:
+      # Published so `npm run dev` (Nuxt dev server on :3000) can reach the
+      # gateway directly at 127.0.0.1:21000, per nuxt.config.ts's devHost.
+      - "21000:21000"
     depends_on:
       postgres: { condition: service_healthy }
       redis:    { condition: service_healthy }
