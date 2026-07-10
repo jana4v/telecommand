@@ -7,7 +7,8 @@ redis:
   password: ""
   db: 0
 
-postgres:
+database:
+  type: "postgres"
   dsn: "postgres://scg:Checkout123@postgres:5432/scg?sslmode=disable"
 
 poll_interval_ms: 500

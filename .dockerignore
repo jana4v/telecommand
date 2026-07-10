@@ -1,0 +1,14 @@
+.git/
+**/node_modules/
+**/.claude/worktrees/
+**/.nuxt/
+**/.output/
+**/dist/
+**/build/
+**/*.log
+GUI/
+SpasdacsOpensource/
+Database/
+Documents/
+docker/images/
+temp/

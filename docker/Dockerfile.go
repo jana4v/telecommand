@@ -23,6 +23,7 @@ COPY GoLang/iam/go.mod          GoLang/iam/go.sum          ./iam/
 COPY GoLang/ingest/go.mod       GoLang/ingest/go.sum       ./ingest/
 COPY GoLang/chainmon/go.mod     GoLang/chainmon/go.sum     ./chainmon/
 COPY GoLang/comparator/go.mod   GoLang/comparator/go.sum   ./comparator/
+COPY GoLang/evaluator/go.mod    GoLang/evaluator/go.sum    ./evaluator/
 COPY GoLang/limiter/go.mod      GoLang/limiter/go.sum      ./limiter/
 COPY GoLang/simulator/go.mod    GoLang/simulator/go.sum    ./simulator/
 COPY GoLang/storage/go.mod      GoLang/storage/go.sum      ./storage/
