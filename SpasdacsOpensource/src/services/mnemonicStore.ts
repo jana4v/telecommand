@@ -1,13 +1,16 @@
 /**
  * mnemonicStore — reactive singleton for Gateway mnemonic catalog.
  *
- * Endpoints used (matching the real gateway's router.go — there is no single
- * "all subsystems, with metadata" endpoint, so the catalog is built by
- * looping /get/tm/details/{subsystem} over the subsystem list):
- *   GET <gatewayUrl>/get/tm/subsystems                     → { subsystems: string[] }
- *   GET <gatewayUrl>/tm/mnemonics                           → liveMnemonics  (Redis live key list)
- *   GET <gatewayUrl>/get/tm/details/{subsystem}             → tmDetailRow[] (looped per subsystem for mnemonicCatalog)
- *   GET <gatewayUrl>/get/tm/pid_mnemonic_list                → string[] of "{pid}_{mnemonic}", parsed into Record<paramId, mnemonic>
+ * Endpoints used (see GoLang/gateway/internal/router.go — this gateway has
+ * no single all-subsystems+metadata or id-mapping endpoint, so the catalog
+ * and paramId→mnemonic map are built by looping /get/tm/details/{subsystem}
+ * over the subsystem list):
+ *   GET <gatewayUrl>/get/tm/subsystems                      → { subsystems: string[] }
+ *   GET <gatewayUrl>/tm/mnemonics                           → { mnemonics: string[] } (Redis live key list)
+ *   GET <gatewayUrl>/get/tm/details/{subsystem}              → [{ pid_no, mnemonic, subsystem, parameter_type, ... }]
+ *   GET <gatewayUrl>/get/tm/mnemonic_list/{subsystem}        → string[]
+ *   GET <gatewayUrl>/get/tm/pid_mnemonic_list/{subsystem}    → string[] (see loadPidMnemonicsForSubsystem note)
+ *   GET <gatewayUrl>/get/tm/{pid}/range                      → { mnemonic, pid, range: string[] }
  *
  *   gatewayUrl default: http://<window.location.hostname>/api/go/v1  (nginx, port 80)
  *
@@ -166,54 +169,45 @@ export async function loadMnemonics(force = false, url?: string): Promise<void> 
     }
 
     // ── Cache miss (or forced refresh): fetch the heavy payloads ──────────
-    // No single "all subsystems, with metadata" endpoint exists on the real
-    // gateway — /get/tm/details/{subsystem} is subsystem-scoped only, so the
-    // full catalog is built by looping the subsystem list fetched above.
-    const subsystemNames = subsystems.value;
-    const [detailResults, mappingRes] = await Promise.allSettled([
-      Promise.allSettled(subsystemNames.map((s) => fetch(`${base}/get/tm/details/${encodeURIComponent(s)}`))),
-      fetch(`${base}/get/tm/pid_mnemonic_list`),
-    ]);
-
-    // ── Rich catalog (/get/tm/details/{subsystem}, looped per subsystem) ───
+    // No single all-subsystems+metadata or id-mapping endpoint exists on
+    // this gateway — build both the rich catalog and the paramId→mnemonic
+    // map by looping GET /get/tm/details/{subsystem} over every subsystem
+    // from the list fetched above.
     let catalog: MnemonicInfo[] = mnemonicCatalog.value;
-    if (detailResults.status === "fulfilled") {
-      const rows: Array<Record<string, unknown>> = [];
-      for (const res of detailResults.value) {
-        if (res.status === "fulfilled" && res.value.ok) {
-          const data = (await res.value.json()) as Array<Record<string, unknown>>;
-          if (Array.isArray(data)) rows.push(...data);
-        }
-      }
-      if (rows.length > 0) {
-        catalog = rows
-          .map((d) => ({
-            mnemonic:  (d.mnemonic ?? "") as string,
+    let mapping: Record<string, string> = paramIdMnemonicMap.value;
+    if (subsystems.value.length > 0) {
+      const detailResults = await Promise.allSettled(
+        subsystems.value.map((sub) => fetch(`${base}/get/tm/details/${encodeURIComponent(sub)}`)),
+      );
+
+      const newCatalog: MnemonicInfo[] = [];
+      const newMapping: Record<string, string> = {};
+
+      for (const res of detailResults) {
+        if (res.status !== "fulfilled" || !res.value.ok) continue;
+        const rows = (await res.value.json()) as unknown;
+        if (!Array.isArray(rows)) continue;
+        for (const d of rows as Array<Record<string, unknown>>) {
+          const mnemonic = String(d.mnemonic ?? "").trim();
+          if (!mnemonic) continue;
+          newCatalog.push({
+            mnemonic,
             subsystem: d.subsystem as string | undefined,
             type:      d.parameter_type as string | undefined,
-            unit:      undefined as string | undefined,
-          }))
-          .filter((d) => d.mnemonic !== "");
+            unit:      d.unit as string | undefined,
+          });
+          const pid = String(d.pid_no ?? "").trim();
+          if (pid) newMapping[pid] = mnemonic;
+        }
+      }
+
+      if (newCatalog.length > 0) {
+        catalog = newCatalog;
         mnemonicCatalog.value = catalog;
       }
-    }
-
-    // ── ParamId -> mnemonic mapping (/get/tm/pid_mnemonic_list, "{pid}_{mnemonic}") ──
-    let mapping: Record<string, string> = paramIdMnemonicMap.value;
-    if (mappingRes.status === "fulfilled" && mappingRes.value.ok) {
-      const raw = (await mappingRes.value.json()) as unknown;
-      if (Array.isArray(raw)) {
-        const out: Record<string, string> = {};
-        for (const entry of raw) {
-          if (typeof entry !== "string") continue;
-          const idx = entry.indexOf("_");
-          if (idx <= 0) continue;
-          const pid = entry.slice(0, idx);
-          const mnemonic = entry.slice(idx + 1);
-          if (pid && mnemonic) out[pid] = mnemonic;
-        }
-        mapping = out;
-        paramIdMnemonicMap.value = out;
+      if (Object.keys(newMapping).length > 0) {
+        mapping = newMapping;
+        paramIdMnemonicMap.value = mapping;
       }
     }
 
@@ -317,9 +311,6 @@ export async function loadMnemonicsForSubsystem(subsystem: string): Promise<stri
  * Fetch the discrete possible states (range) for a mnemonic.
  * Returns an empty array when the mnemonic is continuous or on error.
  */
-// _subsystem: unused now that the real endpoint (GetTMRangeByPID) takes only
-// a pid — kept as a positional param so the 5 existing call sites don't need
-// to change.
 export async function loadMnemonicRange(_subsystem: string, mnemonic: string): Promise<string[]> {
   const base = gatewayUrl.value;
   // The API accepts the paramId (e.g. "TTC00300") for direct primary-key lookup.
@@ -336,8 +327,6 @@ export async function loadMnemonicRange(_subsystem: string, mnemonic: string): P
     }
   }
   try {
-    // GetTMRangeByPID takes only a pid (no subsystem segment) and returns
-    // {pid, mnemonic, range: string[]|null}, not a bare array.
     const res = await fetch(`${base}/get/tm/${apiMnemonic}/range`);
     if (!res.ok) return [];
     const data = (await res.json()) as { range?: string[] | null };
@@ -568,46 +557,44 @@ export async function loadPidMnemonicsForSubsystem(subsystem: string): Promise<s
     const res = await fetch(`${base}/get/tm/pid_mnemonic_list/${encodeURIComponent(key)}`);
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data)) {
+      if (Array.isArray(data) && data.length > 0) {
         const raw = (data as string[])
           .map((v) => String(v ?? "").trim())
           .filter(Boolean);
 
-        // raw.length === 0 is treated as a soft failure, not "no PID
-        // mnemonics for this subsystem": the real gateway currently has a
-        // duplicate route registration for
-        // /get/tm/pid_mnemonic_list/{subsystem} (see router.go — a later TC
-        // route silently shadows the TM one this call needs), so it always
-        // returns []. Fall through to local reconstruction below instead of
-        // trusting that as a genuine empty result.
-        if (raw.length > 0) {
-          const pidLike = raw.filter((v) => {
-            const us = v.indexOf("_");
-            if (us <= 0) return false;
-            const maybeId = v.slice(0, us);
-            return PARAM_ID_RE.test(maybeId);
-          });
+        const pidLike = raw.filter((v) => {
+          const us = v.indexOf("_");
+          if (us <= 0) return false;
+          const maybeId = v.slice(0, us);
+          return PARAM_ID_RE.test(maybeId);
+        });
 
-          if (pidLike.length > 0) {
-            const unique = Array.from(new Set(pidLike));
-            subsystemPidMnemonicCache.set(key, unique);
-            return unique;
-          }
-
-          // If backend returns plain mnemonic names, expand to PID_MNEMONIC.
-          ensureReverseMnemonicIndex();
-          const expanded: string[] = [];
-          for (const mnem of raw.map((v) => resolveTelemetryKey(v)).filter(Boolean)) {
-            const ids = reverseMnemonicToIds.get(mnem);
-            if (!ids?.length) continue;
-            for (const pid of ids) expanded.push(`${pid}_${mnem}`);
-          }
-          // ponytail: SMON/ADC mnemonics have no paramId → fall back to plain names
-          const unique = Array.from(new Set(expanded.length > 0 ? expanded : raw));
+        if (pidLike.length > 0) {
+          const unique = Array.from(new Set(pidLike));
           subsystemPidMnemonicCache.set(key, unique);
           return unique;
         }
+
+        // If backend returns plain mnemonic names, expand to PID_MNEMONIC.
+        ensureReverseMnemonicIndex();
+        const expanded: string[] = [];
+        for (const mnem of raw.map((v) => resolveTelemetryKey(v)).filter(Boolean)) {
+          const ids = reverseMnemonicToIds.get(mnem);
+          if (!ids?.length) continue;
+          for (const pid of ids) expanded.push(`${pid}_${mnem}`);
+        }
+        // ponytail: SMON/ADC mnemonics have no paramId → fall back to plain names
+        const unique = Array.from(new Set(expanded.length > 0 ? expanded : raw));
+        subsystemPidMnemonicCache.set(key, unique);
+        return unique;
       }
+      // data.length === 0 is treated as a soft failure, not "no PID
+      // mnemonics for this subsystem": the real gateway has a duplicate
+      // route registration for /get/tm/pid_mnemonic_list/{subsystem} (see
+      // router.go — a later TC route silently shadows the TM one this call
+      // needs), so TM-only subsystems (e.g. SMON1) always get []. Fall
+      // through to local reconstruction below instead of trusting that as
+      // a genuine empty result.
     }
   } catch {
     // Fall back to local reconstruction below.
