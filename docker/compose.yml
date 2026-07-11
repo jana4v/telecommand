@@ -237,6 +237,10 @@ services:
 
   spasdacs:
     image: scg/spasdacs:latest
+    volumes:
+      # Drop SVG/PNG files here to add them to the Elements palette at
+      # runtime — served by nginx's JSON autoindex at /spasdacs/palette-images/.
+      - ./palette-images:/palette-images:ro
     restart: unless-stopped
 
 # ---------------------------------------------------------------------------

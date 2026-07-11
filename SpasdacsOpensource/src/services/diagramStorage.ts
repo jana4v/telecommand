@@ -289,7 +289,6 @@ export class DiagramStorage {
     };
 
     try {
-      const apiBases = getDiagramApiBaseCandidates();
       const response = await fetchWithDiagramApiFallback("/diagrams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
