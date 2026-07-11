@@ -10,6 +10,7 @@ const menuItems: MenuItem[] = [
   { label: 'Dynamic Limits', icon: 'pi pi-sliders-h', route: '/tm/dynamic-limits' },
   { label: 'System States', icon: 'pi pi-cog', route: '/tm/system-states' },
   { label: 'Delete TM Data', icon: 'pi pi-trash', route: '/tm/delete' },
+  { label: 'Home', icon: 'pi pi-home', route: '/' },
 ]
 
 export const wamp_topic = 'com.tm.status'

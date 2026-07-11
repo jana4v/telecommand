@@ -32,6 +32,11 @@ const menuItems: MenuItem[] = [
     icon: 'pi pi-database',
     route: '/payloadTc/database',
   },
+  {
+    label: 'Home',
+    icon: 'pi pi-home',
+    route: '/',
+  },
 ]
 
 export const wamp_topic = 'com.tc_file.status'
