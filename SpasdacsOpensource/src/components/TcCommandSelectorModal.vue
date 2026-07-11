@@ -81,7 +81,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { gatewayUrl } from "../services/mnemonicStore";
+import { gatewayUrl, resolveTcCommandCid } from "../services/mnemonicStore";
 import { enqueueCommands } from "../stores/commandQueueStore";
 
 interface TcRecord {
@@ -135,8 +135,11 @@ watch(() => props.visible, async (v) => {
 
 async function fetchRecord(cmdDesc: string): Promise<TcRecord | null> {
   try {
-    const url = `${gatewayUrl.value}/telecommand/record?cmdDesc=${encodeURIComponent(cmdDesc)}`;
-    const res = await fetch(url);
+    // The gateway looks TC records up by CID, not cmd_desc — resolve via the
+    // "{CID}_{CMD_DESC}" catalog first, then fetch the full document.
+    const cid = await resolveTcCommandCid(cmdDesc);
+    if (!cid) return { cmdDesc, dataPart: [] };
+    const res = await fetch(`${gatewayUrl.value}/get/tc/${encodeURIComponent(cid)}`);
     if (!res.ok) return { cmdDesc, dataPart: [] };
     const data = await res.json();
     return {

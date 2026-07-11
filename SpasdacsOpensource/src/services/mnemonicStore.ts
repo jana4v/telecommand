@@ -342,7 +342,7 @@ export async function loadMnemonicRange(_subsystem: string, mnemonic: string): P
 export async function loadTcSubsystems(): Promise<string[]> {
   const base = gatewayUrl.value;
   try {
-    const res = await fetch(`${base}/telecommand/subsystems`);
+    const res = await fetch(`${base}/get/tc/subsystems`);
     if (!res.ok) return [];
     const data = await res.json() as { subsystems?: string[] };
     return data.subsystems ?? [];
@@ -359,8 +359,8 @@ export async function loadTcSubsystems(): Promise<string[]> {
 export async function loadTcMnemonicsForSubsystem(subsystem?: string): Promise<string[]> {
   const base = gatewayUrl.value;
   const path = subsystem && subsystem !== "all"
-    ? `${base}/mnemonics/tc/${encodeURIComponent(subsystem)}`
-    : `${base}/mnemonics/tc/all`;
+    ? `${base}/get/tc/mnemonic_list/${encodeURIComponent(subsystem)}`
+    : `${base}/get/tc/mnemonic_list`;
   try {
     const res = await fetch(path);
     if (!res.ok) return [];
@@ -377,9 +377,11 @@ let tcDisplayMapInFlight: Promise<Record<string, string>> | null = null;
 /**
  * Fetch TC display labels keyed by command value.
  *
- * The `/mnemonics/tc` payload is richer than `/mnemonics/tc/all` and may include
- * `full_ref` in id_mnemonic style. The editor uses this only for dropdown labels
- * while preserving stored command values.
+ * Built from /get/tc/cid_mnemonic_list, which returns "{CID}_{CMD_DESC}"
+ * strings (e.g. "TCC00123_PHASE_METER_MNT_RATE_SECS"). The editor uses this
+ * only for dropdown labels while preserving stored command values; the CID
+ * prefix also lets callers resolve a cmd_desc back to its CID (see
+ * resolveTcCommandCid).
  */
 export async function loadTcMnemonicDisplayMap(force = false): Promise<Record<string, string>> {
   if (!force && tcDisplayMapCache) return tcDisplayMapCache;
@@ -388,30 +390,21 @@ export async function loadTcMnemonicDisplayMap(force = false): Promise<Record<st
   const base = gatewayUrl.value;
   const request = (async (): Promise<Record<string, string>> => {
     try {
-      const res = await fetch(`${base}/mnemonics/tc`);
+      const res = await fetch(`${base}/get/tc/cid_mnemonic_list`);
       if (!res.ok) return tcDisplayMapCache ?? {};
 
       const data = await res.json();
       const map: Record<string, string> = {};
 
       if (Array.isArray(data)) {
-        for (const row of data as Array<Record<string, unknown> | string>) {
-          if (typeof row === "string") {
-            const raw = row.trim();
-            if (raw) map[raw] = raw;
-            continue;
-          }
-
-          const command = String(
-            row.command ?? row.cmdDesc ?? row.mnemonic ?? row.name ?? "",
-          ).trim();
+        for (const row of data as string[]) {
+          const raw = String(row ?? "").trim();
+          if (!raw) continue;
+          // "{CID}_{CMD_DESC}" — command value is everything after the first "_".
+          const us = raw.indexOf("_");
+          const command = us > 0 ? raw.slice(us + 1) : raw;
           if (!command) continue;
-
-          const label = String(
-            row.full_ref ?? row.fullRef ?? row.id_mnemonic ?? row.display ?? command,
-          ).trim();
-
-          map[command] = label || command;
+          map[command] = raw;
         }
       }
 
@@ -426,6 +419,20 @@ export async function loadTcMnemonicDisplayMap(force = false): Promise<Record<st
 
   tcDisplayMapInFlight = request;
   return request;
+}
+
+/**
+ * Resolve a TC command's cmd_desc to its CID using the display map
+ * ("{CID}_{CMD_DESC}" labels). Returns "" when unknown.
+ */
+export async function resolveTcCommandCid(cmdDesc: string): Promise<string> {
+  const wanted = String(cmdDesc ?? "").trim();
+  if (!wanted) return "";
+  const map = await loadTcMnemonicDisplayMap();
+  const label = map[wanted];
+  if (!label) return "";
+  const us = label.indexOf("_");
+  return us > 0 ? label.slice(0, us) : "";
 }
 
 // ── Suggestions helper ────────────────────────────────────────────────────

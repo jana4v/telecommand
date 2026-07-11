@@ -6,8 +6,6 @@
 **/dist/
 **/build/
 **/*.log
-GUI/
-SpasdacsOpensource/
 Database/
 Documents/
 docker/images/
